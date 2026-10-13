@@ -459,3 +459,61 @@ def get_latest_student_report(student_id: str, db: Session = Depends(get_db)):
         return get_report_by_id(report.id, db)
     return get_report_by_id("demo", db)
 
+
+# Reassessment questions bank
+REASSESSMENT_QUESTIONS_DB = [
+    {
+        "id": "reass_q1",
+        "concept_id": "equivalent_fractions",
+        "concept_name": "Equivalent Fractions & Simplification",
+        "title": "Reassessment 1: Equivalent Fractions",
+        "text": "Simplify 14 / 21 to its lowest terms.",
+        "options": [
+            {"id": "ropt_a", "text": "2 / 3"},
+            {"id": "ropt_b", "text": "7 / 10"},
+            {"id": "ropt_c", "text": "4 / 6"},
+            {"id": "ropt_d", "text": "1 / 2"}
+        ],
+        "correct_option_id": "ropt_a",
+        "explanation": "Dividing numerator 14 and denominator 21 by 7 yields 2/3.",
+        "difficulty": "medium"
+    },
+    {
+        "id": "reass_q2",
+        "concept_id": "fraction_addition",
+        "concept_name": "Adding & Subtracting Unlike Fractions",
+        "title": "Reassessment 2: Unlike Addition",
+        "text": "What is 2 / 5 + 1 / 10 ?",
+        "options": [
+            {"id": "ropt2_a", "text": "3 / 15"},
+            {"id": "ropt2_b", "text": "1 / 2"},
+            {"id": "ropt2_c", "text": "5 / 10"},
+            {"id": "ropt2_d", "text": "3 / 10"}
+        ],
+        "correct_option_id": "ropt2_b",
+        "explanation": "The LCD is 10. 2/5 = 4/10. 4/10 + 1/10 = 5/10, which reduces to 1/2.",
+        "difficulty": "medium"
+    }
+]
+
+@router.get("/reassessment/questions")
+def get_reassessment_questions():
+    """Returns dynamic post-intervention reassessment questions."""
+    return REASSESSMENT_QUESTIONS_DB
+
+from app.data.seed_data import LEARNING_MODULES_DB
+
+@router.get("/learning/modules")
+def get_all_learning_modules():
+    """Returns all remedial micro-learning delivery modules."""
+    return {k: v.dict() for k, v in LEARNING_MODULES_DB.items()}
+
+@router.get("/learning/module/{concept_id}")
+def get_learning_module_by_concept(concept_id: str):
+    """Returns the targeted learning module for a specific concept."""
+    module = LEARNING_MODULES_DB.get(concept_id)
+    if not module:
+        # Fallback to first module
+        module = next(iter(LEARNING_MODULES_DB.values()))
+    return module.dict()
+
