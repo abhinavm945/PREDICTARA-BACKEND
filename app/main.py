@@ -24,7 +24,7 @@ app = FastAPI(
 )
 
 # CORS Configuration
-# Supports local development, production Vercel domains, and preview URLs (*.vercel.app)
+# Supports local development, production Vercel & Render domains
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -32,9 +32,10 @@ app.add_middleware(
         "http://localhost:3001",
         "http://127.0.0.1:3000",
         "https://predictara.vercel.app",
+        "https://predictara-frontend-only-poc.onrender.com",
         "*"
     ],
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https://.*(\.vercel\.app|\.onrender\.com)",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
