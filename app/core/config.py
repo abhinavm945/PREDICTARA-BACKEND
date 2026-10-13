@@ -5,6 +5,10 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Predictara AI Academic Intelligence Platform"
     API_V1_STR: str = "/api/v1"
     
+    # Database URL: Supports SQLite out-of-the-box or PostgreSQL via env
+    # e.g., postgresql://user:password@localhost:5432/predictara_db
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./predictara.db")
+    
     # Mathpix OCR credentials (set via env or fallback mock/free endpoint)
     MATHPIX_APP_ID: str = os.getenv("MATHPIX_APP_ID", "")
     MATHPIX_APP_KEY: str = os.getenv("MATHPIX_APP_KEY", "")
