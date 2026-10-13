@@ -1,11 +1,20 @@
 from app.core.database import SessionLocal
 from app.models.db_models import ConceptDB, QuestionDB, SchoolDB, UserDB
 from app.data.seed_data import CONCEPTS_DB, QUESTIONS_DB
+from sqlalchemy import text
 
 def seed_database():
     """Seeds initial Class 6 Math concepts, questions, and default school/demo user."""
     db = SessionLocal()
     try:
+        # Safe schema migration for user columns
+        try:
+            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);"))
+            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS target_goal VARCHAR(255);"))
+            db.commit()
+        except Exception:
+            db.rollback()
+
         # Seed default school
         school = db.query(SchoolDB).filter_by(code="DEMO_SCH_01").first()
         if not school:

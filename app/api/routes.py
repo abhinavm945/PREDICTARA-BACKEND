@@ -27,10 +27,157 @@ def process_rough_work_ocr(payload: OCRRequest):
     result = mathpix_service.process_image(payload.image_base64)
     return result
 
+import hashlib
+import uuid
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models.db_models import AssessmentAttemptDB, AttemptEvidenceDB, DiagnosticReportDB
+from app.models.db_models import UserDB, AssessmentAttemptDB, AttemptEvidenceDB, DiagnosticReportDB
+from app.models.schemas import (
+    LoginRequest,
+    RegisterRequest,
+    UserResponse,
+    ProfileUpdateRequest
+)
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+@router.post("/auth/login", response_model=UserResponse)
+def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
+    """Logs in an existing user or creates a student account if first time."""
+    email = payload.email.strip().lower()
+    user = db.query(UserDB).filter_by(email=email).first()
+
+    if not user:
+        clean_name = email.split("@")[0].replace(".", " ").title()
+        user = UserDB(
+            id=f"usr_{uuid.uuid4().hex[:12]}",
+            email=email,
+            full_name=clean_name if clean_name else "Learner",
+            role=payload.role or "STUDENT",
+            password_hash=hash_password(payload.password),
+            grade_level=6,
+            section="A"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    token = f"prd_sess_{user.id}_{uuid.uuid4().hex[:16]}"
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        grade_level=user.grade_level,
+        section=user.section,
+        school_id=user.school_id,
+        target_goal=user.target_goal,
+        token=token
+    )
+
+@router.post("/auth/register", response_model=UserResponse)
+def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
+    """Registers a new user account in PostgreSQL."""
+    email = payload.email.strip().lower()
+    user = db.query(UserDB).filter_by(email=email).first()
+
+    if not user:
+        user = UserDB(
+            id=f"usr_{uuid.uuid4().hex[:12]}",
+            email=email,
+            full_name=payload.full_name.strip(),
+            role=payload.role or "STUDENT",
+            password_hash=hash_password(payload.password),
+            grade_level=payload.grade_level or 6,
+            school_id=payload.school_id,
+            section="A"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    token = f"prd_sess_{user.id}_{uuid.uuid4().hex[:16]}"
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        grade_level=user.grade_level,
+        section=user.section,
+        school_id=user.school_id,
+        target_goal=user.target_goal,
+        token=token
+    )
+
+@router.get("/auth/me/{user_id}", response_model=UserResponse)
+def get_current_user(user_id: str, db: Session = Depends(get_db)):
+    """Fetches user details by user ID from PostgreSQL."""
+    user = db.query(UserDB).filter_by(id=user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        grade_level=user.grade_level,
+        section=user.section,
+        school_id=user.school_id,
+        target_goal=user.target_goal,
+        token=f"prd_sess_{user.id}"
+    )
+
+@router.put("/user/profile", response_model=UserResponse)
+def update_user_profile(payload: ProfileUpdateRequest, db: Session = Depends(get_db)):
+    """Persists user profile updates (name, grade, target learning goal) to PostgreSQL."""
+    user = db.query(UserDB).filter_by(id=payload.user_id).first()
+    if not user:
+        # If user ID doesn't exist, search by demo user or create
+        user = db.query(UserDB).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+    if payload.full_name:
+        user.full_name = payload.full_name.strip()
+    if payload.grade_level is not None:
+        user.grade_level = payload.grade_level
+    if payload.target_goal:
+        user.target_goal = payload.target_goal.strip()
+
+    db.commit()
+    db.refresh(user)
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        grade_level=user.grade_level,
+        section=user.section,
+        school_id=user.school_id,
+        target_goal=user.target_goal,
+        token=f"prd_sess_{user.id}"
+    )
+
+@router.get("/user/{user_id}/history")
+def get_user_history(user_id: str, db: Session = Depends(get_db)):
+    """Retrieves all past assessment attempts and diagnostic reports for this user."""
+    attempts = db.query(AssessmentAttemptDB).filter_by(user_id=user_id).order_by(AssessmentAttemptDB.started_at.desc()).all()
+    history = []
+    for att in attempts:
+        rep = att.report
+        history.append({
+            "attempt_id": att.id,
+            "status": att.status,
+            "started_at": att.started_at,
+            "total_time_spent_seconds": att.total_time_spent_seconds,
+            "weak_concepts": rep.weak_concepts if rep else [],
+            "prerequisite_gaps": rep.prerequisite_gaps if rep else [],
+            "moderator_status": rep.moderator_status if rep else "COMPLETED"
+        })
+    return {"user_id": user_id, "attempts": history}
 
 @router.post("/pipeline/evaluate", response_model=PipelineResponse)
 def evaluate_assessment(submission: AssessmentSubmission, db: Session = Depends(get_db)):
@@ -41,9 +188,14 @@ def evaluate_assessment(submission: AssessmentSubmission, db: Session = Depends(
     try:
         pipeline_res = pipeline_engine.process_assessment(submission)
 
+        # Match or fallback user
+        target_user = db.query(UserDB).filter_by(id=submission.student_id).first()
+        if not target_user:
+            target_user = db.query(UserDB).filter_by(email="alex.johnson@predictara.edu").first()
+
         # Persist Assessment Attempt
         attempt = AssessmentAttemptDB(
-            user_id="usr_student_01",
+            user_id=target_user.id if target_user else "usr_student_01",
             assessment_id=submission.assessment_id,
             status="COMPLETED",
             total_time_spent_seconds=sum(e.time_spent_seconds for e in submission.evidence_list)

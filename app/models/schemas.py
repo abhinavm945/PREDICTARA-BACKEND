@@ -159,3 +159,35 @@ class PipelineResponse(BaseModel):
     # Moderator Workflow (PRD Section 5)
     moderator_status: str # 'PENDING_REVIEW' | 'AUTO_DISPATCHED' | 'APPROVED'
     moderator_sla_days: int
+
+# User & Authentication Schemas
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+    role: Optional[str] = "STUDENT"
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    role: Optional[str] = "STUDENT"
+    grade_level: Optional[int] = 6
+    school_id: Optional[str] = None
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    role: str
+    grade_level: int
+    section: Optional[str] = "A"
+    school_id: Optional[str] = None
+    target_goal: Optional[str] = None
+    token: Optional[str] = None
+
+class ProfileUpdateRequest(BaseModel):
+    user_id: str
+    full_name: Optional[str] = None
+    grade_level: Optional[int] = None
+    subject: Optional[str] = None
+    target_goal: Optional[str] = None
