@@ -191,3 +191,24 @@ class ProfileUpdateRequest(BaseModel):
     grade_level: Optional[int] = None
     subject: Optional[str] = None
     target_goal: Optional[str] = None
+
+class ModeratorApprovalRequest(BaseModel):
+    teacher_remarks: Optional[str] = None
+
+class ModeratorSettingsRequest(BaseModel):
+    moderator_enabled: bool
+
+class ModeratorQueueItem(BaseModel):
+    id: str
+    attempt_id: str
+    student_id: Optional[str] = None
+    student_name: str
+    grade: str
+    subject: str
+    submitted_at: str
+    sla_remaining: str
+    status: str
+    ai_summary: str
+    detected_gap: str
+    teacher_remarks: Optional[str] = ""
+    dispatched_at: Optional[str] = None
