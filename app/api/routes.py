@@ -517,3 +517,98 @@ def get_learning_module_by_concept(concept_id: str):
         module = next(iter(LEARNING_MODULES_DB.values()))
     return module.dict()
 
+
+# =====================================================================
+# Class 6th Mathematics Concept Intelligence Graph (CIG) Endpoints
+# NCERT Ganita Prakash (Grade 6) - All 10 Chapters
+# =====================================================================
+
+import json
+from pathlib import Path
+
+_KG_CACHE = None
+
+def _load_knowledge_graph():
+    global _KG_CACHE
+    if _KG_CACHE is not None:
+        return _KG_CACHE
+    kg_path = Path(__file__).resolve().parent.parent / "data" / "class6_knowledge_graph.json"
+    if kg_path.exists():
+        with open(kg_path, "r", encoding="utf-8") as f:
+            _KG_CACHE = json.load(f)
+            return _KG_CACHE
+    return {
+        "title": "Predictara Class 6 Mathematics Concept Intelligence Graph",
+        "chapters": [],
+        "records_by_type": {"concept": [], "edge": [], "misconception": [], "assessment": [], "intervention": [], "mastery_rule": []}
+    }
+
+@router.get("/knowledge-graph/chapters")
+def get_knowledge_graph_chapters():
+    kg = _load_knowledge_graph()
+    chapters = []
+    concepts = kg.get("records_by_type", {}).get("concept", [])
+    for ch in kg.get("chapters", []):
+        prefix = ch.get("prefix", "")
+        ch_concepts = [c for c in concepts if c.get("id", "").startswith(prefix)]
+        chapters.append({
+            "id": ch.get("id"),
+            "number": ch.get("number"),
+            "name": ch.get("name"),
+            "prefix": prefix,
+            "domain": ch.get("domain"),
+            "pages": ch.get("pages"),
+            "concept_count": len(ch_concepts)
+        })
+    return {"total_chapters": len(chapters), "chapters": chapters}
+
+@router.get("/knowledge-graph/chapter/{chapter_id}")
+def get_chapter_knowledge_graph(chapter_id: str):
+    kg = _load_knowledge_graph()
+    prefix = chapter_id.upper().replace("CH0", "").replace("CH", "")
+    for ch in kg.get("chapters", []):
+        if ch.get("id", "").lower() == chapter_id.lower() or str(ch.get("number")) == str(chapter_id) or ch.get("prefix", "").lower() == chapter_id.lower():
+            prefix = ch.get("prefix")
+            break
+            
+    records = kg.get("records_by_type", {})
+    chapter_concepts = [c for c in records.get("concept", []) if c.get("id", "").startswith(prefix)]
+    concept_ids = set(c["id"] for c in chapter_concepts)
+    
+    chapter_edges = [
+        e for e in records.get("edge", []) 
+        if any(cid in e.get("source_or_target", "") for cid in concept_ids)
+    ]
+    chapter_misconceptions = [
+        m for m in records.get("misconception", [])
+        if any(cid in m.get("source_or_target", "") for cid in concept_ids) or prefix in m.get("id", "")
+    ]
+    chapter_assessments = [
+        a for a in records.get("assessment", [])
+        if any(cid in a.get("source_or_target", "") for cid in concept_ids) or prefix in a.get("id", "")
+    ]
+    chapter_interventions = [
+        i for i in records.get("intervention", [])
+        if any(cid in i.get("source_or_target", "") for cid in concept_ids) or prefix in i.get("id", "")
+    ]
+    chapter_mastery_rules = [
+        r for r in records.get("mastery_rule", [])
+        if any(cid in r.get("source_or_target", "") for cid in concept_ids) or prefix in r.get("id", "")
+    ]
+    
+    return {
+        "chapter_id": chapter_id,
+        "prefix": prefix,
+        "concepts_count": len(chapter_concepts),
+        "concepts": chapter_concepts,
+        "edges_count": len(chapter_edges),
+        "edges": chapter_edges,
+        "misconceptions": chapter_misconceptions,
+        "assessments": chapter_assessments,
+        "interventions": chapter_interventions,
+        "mastery_rules": chapter_mastery_rules
+    }
+
+@router.get("/knowledge-graph/full")
+def get_full_knowledge_graph():
+    return _load_knowledge_graph()
