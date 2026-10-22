@@ -1,8 +1,17 @@
 {
-  "title": "Predictara Class 6 Mathematics Concept Intelligence Graph (CIG)",
-  "version": "1.0.0",
-  "curriculum": "NCERT Ganita Prakash Grade 6 (2025-2027 Reprint)",
-  "total_records": 451,
+  "title": "Predictara Concept Intelligence Graph (CIG) - NCERT Class 6 Mathematics with Cross-Chapter, Cross-Class & Multidisciplinary Foundations",
+  "version": "1.1.0",
+  "curriculum": "NCERT Ganita Prakash (Grade 6) + Prior Grade Foundations (Grades 4-5) + Cross-Disciplinary STEM Links",
+  "total_records": 511,
+  "cross_network_summary": {
+    "intra_chapter_concepts": 172,
+    "cross_class_prior_concepts": 10,
+    "cross_subject_stem_concepts": 7,
+    "cross_chapter_edges": 22,
+    "cross_class_edges": 12,
+    "cross_subject_edges": 9,
+    "total_edges": 216
+  },
   "chapters": [
     {
       "id": "CH01_PAT",
@@ -83,6 +92,35 @@
       "prefix": "INT",
       "domain": "Integers & Signed Numbers",
       "pages": 56
+    }
+  ],
+  "prior_grades": [
+    {
+      "id": "GRADE_4",
+      "name": "Class 4 Mathematics Foundational Competencies",
+      "concepts_count": 3
+    },
+    {
+      "id": "GRADE_5",
+      "name": "Class 5 Mathematics Foundational Competencies",
+      "concepts_count": 7
+    }
+  ],
+  "cross_subjects": [
+    {
+      "id": "SCIENCE",
+      "name": "General Science / Physics / Chemistry / Biology",
+      "domain": "STEM & Inquiry"
+    },
+    {
+      "id": "GEOGRAPHY",
+      "name": "Physical Geography & Earth Science",
+      "domain": "Earth Systems"
+    },
+    {
+      "id": "ART",
+      "name": "Design, Architecture & Heritage Arts",
+      "domain": "Spatial Aesthetics"
     }
   ],
   "records_by_type": {
@@ -1978,6 +2016,227 @@
         "evidence_or_trigger": "",
         "intervention_or_followup": "",
         "status": "draft"
+      },
+      {
+        "record_type": "concept",
+        "id": "G5-NUM-01",
+        "name": "Whole Number Place Value to 10,000 (Class 5)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Understand periods (ones, thousands) and place value up to 5-digit numbers; foundational prior grade prerequisite.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Prior Grade (Class 5) - Number Sense",
+        "class_level": 5
+      },
+      {
+        "record_type": "concept",
+        "id": "G5-NUM-02",
+        "name": "Multiplication Tables 1-12 Fluency (Class 5)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Rapid procedural recall of single-digit multiplication facts; critical prerequisite for factors, multiples and fractions.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Prior Grade (Class 5) - Arithmetic Operations",
+        "class_level": 5
+      },
+      {
+        "record_type": "concept",
+        "id": "G5-NUM-03",
+        "name": "Division as Equal Sharing and Grouping (Class 5)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Understand division as sharing equally and forming groups with quotient and remainder.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Prior Grade (Class 5) - Arithmetic Operations",
+        "class_level": 5
+      },
+      {
+        "record_type": "concept",
+        "id": "G5-FRC-01",
+        "name": "Fraction Intuition: Half, Quarter, Three-Quarters (Class 5)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Concrete visual recognition of 1/2, 1/4, 3/4 on circular cakes, paper strips and collections.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Prior Grade (Class 5) - Fractions",
+        "class_level": 5
+      },
+      {
+        "record_type": "concept",
+        "id": "G5-GEO-01",
+        "name": "Basic 2D Closed Shapes (Class 5)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Identify and distinguish triangles, rectangles, squares and circles by side and vertex counts.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Prior Grade (Class 5) - Geometry",
+        "class_level": 5
+      },
+      {
+        "record_type": "concept",
+        "id": "G5-GEO-02",
+        "name": "Length Measurement in cm and m (Class 5)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Measure real objects using 15 cm and 30 cm rulers; align 0-mark accurately to object edge.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Prior Grade (Class 5) - Measurement",
+        "class_level": 5
+      },
+      {
+        "record_type": "concept",
+        "id": "G5-DAT-01",
+        "name": "Reading Simple Pictographs (Class 5)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Interpret icons representing multiple units (e.g. 1 star = 5 books) in visual data tables.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Prior Grade (Class 5) - Data Handling",
+        "class_level": 5
+      },
+      {
+        "record_type": "concept",
+        "id": "G4-NUM-01",
+        "name": "Multi-digit Addition & Subtraction with Regrouping (Class 4)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Column addition and borrowing/regrouping across place value positions.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Prior Grade (Class 4) - Arithmetic Operations",
+        "class_level": 4
+      },
+      {
+        "record_type": "concept",
+        "id": "G4-NUM-02",
+        "name": "Skip Counting Sequences by 2, 3, 5, 10 (Class 4)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Verbal and written forward skip counting forming the cognitive bridge to multiplication tables and patterns.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Prior Grade (Class 4) - Number Patterns",
+        "class_level": 4
+      },
+      {
+        "record_type": "concept",
+        "id": "G4-GEO-01",
+        "name": "Identifying Straight vs Curved Lines (Class 4)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Differentiate between straight ruler edges and curved boundaries in natural and geometric shapes.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Prior Grade (Class 4) - Geometry",
+        "class_level": 4
+      },
+      {
+        "record_type": "concept",
+        "id": "SCI-INT-01",
+        "name": "Thermometers & Sub-Zero Temperatures (Science / Physics)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Science Link: The Celsius thermometer scale with 0°C freezing point of water and negative numbers representing sub-zero temperatures (Himalayas, Arctic).",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Cross-Subject (Science) - Thermal Physics",
+        "subject": "Science"
+      },
+      {
+        "record_type": "concept",
+        "id": "GEO-INT-01",
+        "name": "Sea Level Datum, Elevation & Depth (Geography / Earth Science)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Geography Link: Mean sea level as 0 meter benchmark; positive integers represent mountain altitude (+8848m Mt Everest), negative integers represent ocean depths (-11000m Mariana Trench).",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Cross-Subject (Geography) - Physical Geography",
+        "subject": "Geography"
+      },
+      {
+        "record_type": "concept",
+        "id": "SCI-DAT-01",
+        "name": "Meteorological Data, Rainfall & Temperature Charts (Science / EVS)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Science Link: Tracking daily rainfall using rain gauges, recording weather tallies, and plotting monthly temperature curves using bar graphs.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Cross-Subject (Science / EVS) - Meteorology & Ecology",
+        "subject": "Science"
+      },
+      {
+        "record_type": "concept",
+        "id": "BIO-SYM-01",
+        "name": "Biological Symmetry in Flora & Fauna (Biology / Life Science)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Biology Link: Bilateral symmetry in butterflies, human face and leaves; radial symmetry in hibiscus flowers, starfish and honeycomb hex patterns.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Cross-Subject (Biology) - Morphology & Life Science",
+        "subject": "Biology"
+      },
+      {
+        "record_type": "concept",
+        "id": "SCI-FRC-01",
+        "name": "Solution Concentrations & Dilution Ratios (Science / Chemistry)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Chemistry Link: Solute-solvent proportions, 1/4 dilution, saline water concentration and parts of chemical mixtures expressed as rational fractions.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Cross-Subject (Science) - Chemistry & Matter",
+        "subject": "Science"
+      },
+      {
+        "record_type": "concept",
+        "id": "PHY-LIN-01",
+        "name": "Directional Bearings, Navigation & Shadow Angles (Physics / Astronomy)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Physics Link: Compass rose 8-point bearings (90° North-to-East quarter turns); solar angle of elevation determining shadow length on sundials.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Cross-Subject (Physics) - Optics & Navigation",
+        "subject": "Physics"
+      },
+      {
+        "record_type": "concept",
+        "id": "ART-PAT-01",
+        "name": "Tessellations, Rangoli & Architectural Motifs (Art / Architecture)",
+        "source_or_target": "",
+        "relation": "",
+        "description": "Art Link: Geometric tile tessellations without gaps, symmetrical Indian Rangoli/Kolam floor art, and repetitive polygonal Islamic architectural friezes.",
+        "evidence_or_trigger": "",
+        "intervention_or_followup": "",
+        "status": "verified",
+        "domain": "Cross-Subject (Art) - Design & Architecture",
+        "subject": "Art"
       }
     ],
     "edge": [
@@ -3883,6 +4142,393 @@
         "evidence_or_trigger": "",
         "intervention_or_followup": "",
         "status": "proposed"
+      },
+      {
+        "record_type": "edge",
+        "id": "PRM-13__FRC-11",
+        "name": "LCM Prerequisite for Unlike Fraction Addition",
+        "source_or_target": "PRM-13 -> FRC-11",
+        "relation": "prerequisite_of",
+        "description": "Finding LCM of denominators in Chapter 5 is a strict blocking prerequisite for adding unlike fractions in Chapter 7.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "PRM-13__FRC-12",
+        "name": "LCM Prerequisite for Unlike Fraction Subtraction",
+        "source_or_target": "PRM-13 -> FRC-12",
+        "relation": "prerequisite_of",
+        "description": "Finding common multiple/LCM in Chapter 5 is mandatory before subtracting fractions with differing denominators in Chapter 7.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "PRM-12__FRC-06",
+        "name": "HCF Prerequisite for Fraction Simplification",
+        "source_or_target": "PRM-12 -> FRC-06",
+        "relation": "prerequisite_of",
+        "description": "Finding Highest Common Factor (HCF) in Chapter 5 is the mathematical prerequisite for reducing fractions to simplest form.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "PRM-08__FRC-05",
+        "name": "Common Factors Support Equivalent Fractions",
+        "source_or_target": "PRM-08 -> FRC-05",
+        "relation": "supports",
+        "description": "Factorization insight supports understanding why multiplying/dividing numerator and denominator by same factor preserves value.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "PRM-01__FRC-05",
+        "name": "Multiples Concept Supports Fraction Scaling",
+        "source_or_target": "PRM-01 -> FRC-05",
+        "relation": "supports",
+        "description": "Generating multiples of a number provides the procedural foundation for generating equivalent fraction chains.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "LIN-02__CON-01",
+        "name": "Line Segment Measurement Prerequisite for Ruler/Compass Construction",
+        "source_or_target": "LIN-02 -> CON-01",
+        "relation": "prerequisite_of",
+        "description": "Accurate line segment definition and measurement in Ch 2 is prerequisite for constructing line segments in Ch 8.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "LIN-05__CON-03",
+        "name": "Angle Vertex/Arms Prerequisite for Angle Construction",
+        "source_or_target": "LIN-05 -> CON-03",
+        "relation": "prerequisite_of",
+        "description": "Understanding vertex, arms and rotational degree measure in Ch 2 is prerequisite for constructing 60°, 90°, 120° angles in Ch 8.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "LIN-08__CON-02",
+        "name": "Perpendicular Lines Prerequisite for Perpendicular Bisector",
+        "source_or_target": "LIN-08 -> CON-02",
+        "relation": "prerequisite_of",
+        "description": "Knowing that perpendiculars form 90° angles is prerequisite for constructing perpendicular bisector using compass.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "LIN-06__CON-04",
+        "name": "Angle Types Support Angle Bisector Construction",
+        "source_or_target": "LIN-06 -> CON-04",
+        "relation": "supports",
+        "description": "Classifying acute/obtuse angles supports verifying that bisector divides angle into two equal acute halves.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "LIN-01__PER-01",
+        "name": "Boundary Segments Prerequisite for Perimeter",
+        "source_or_target": "LIN-01 -> PER-01",
+        "relation": "prerequisite_of",
+        "description": "Understanding closed polygonal boundaries composed of line segments is prerequisite for perimeter.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "LIN-07__PER-06",
+        "name": "Right Angles Support Rectangle Area",
+        "source_or_target": "LIN-07 -> PER-06",
+        "relation": "supports",
+        "description": "Perpendicular adjacent sides (90°) in rectangles enable partitioning into a grid of unit squares (l x b).",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "PAT-19__SYM-02",
+        "name": "Regular Polygons Support Line Symmetry Analysis",
+        "source_or_target": "PAT-19 -> SYM-02",
+        "relation": "supports",
+        "description": "Recognizing n-sided regular polygons from Ch 1 allows learners to deduce that an n-gon possesses exactly n lines of symmetry in Ch 9.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "PAT-24__SYM-04",
+        "name": "Sequence Rules Support Rotational Symmetry Orders",
+        "source_or_target": "PAT-24 -> SYM-04",
+        "relation": "supports",
+        "description": "Mathematical sequence rules support calculating rotational symmetry angle intervals (360/n).",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "PAT-08__PER-07",
+        "name": "Square Numbers Structural Analog of Square Area",
+        "source_or_target": "PAT-08 -> PER-07",
+        "relation": "structural_analog_of",
+        "description": "Dot arrays for square numbers (n^2) from Ch 1 are structurally identical to the unit square tiling area formula in Ch 6.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "NUM-06__PER-06",
+        "name": "Multiplication Prerequisite for Rectangle Area Formula",
+        "source_or_target": "NUM-06 -> PER-06",
+        "relation": "prerequisite_of",
+        "description": "Fluent 2-digit by 2-digit multiplication from Ch 3 is mandatory for applying Area = Length x Breadth.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "NUM-07__PRM-01",
+        "name": "Division with Remainder Prerequisite for Divisibility & Factors",
+        "source_or_target": "NUM-07 -> PRM-01",
+        "relation": "prerequisite_of",
+        "description": "Zero remainder upon division from Ch 3 is the mathematical definition of a factor in Ch 5.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "NUM-04__DAT-05",
+        "name": "Large Number Estimation Supports Bar Graph Scaling",
+        "source_or_target": "NUM-04 -> DAT-05",
+        "relation": "supports",
+        "description": "Rounding and place-value estimation from Ch 3 helps students choose intervals (e.g. 1 unit = 100 students) in Ch 4.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "DAT-05__FRC-02",
+        "name": "Bar Graph Proportions Support Fraction Part-to-Whole Intuition",
+        "source_or_target": "DAT-05 -> FRC-02",
+        "relation": "supports",
+        "description": "Visualizing relative heights on bar charts reinforces fraction as proportion of a total quantity.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "FRC-04__INT-04",
+        "name": "Fraction Number Line Structural Analog of Integer Number Line",
+        "source_or_target": "FRC-04 -> INT-04",
+        "relation": "structural_analog_of",
+        "description": "Locating fractions between 0 and 1 transfers directly to calibrating negative numbers to the left of 0.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "FRC-07__INT-05",
+        "name": "Fraction Comparison Supports Integer Ordering",
+        "source_or_target": "FRC-07 -> INT-05",
+        "relation": "supports",
+        "description": "Position-based ordering on the horizontal line supports understanding why -5 < -2.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "FRC-10__INT-06",
+        "name": "Addition Hops on Number Line Transfers to Integer Addition",
+        "source_or_target": "FRC-10 -> INT-06",
+        "relation": "supports",
+        "description": "Vector hop model of fraction addition supports directed movement (right for positive, left for negative) on integer line.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "CON-02__SYM-03",
+        "name": "Perpendicular Bisector Operationalises Reflection Axis",
+        "source_or_target": "CON-02 -> SYM-03",
+        "relation": "operationalised_by",
+        "description": "The perpendicular bisector constructed in Ch 8 is identical to the mirror line of symmetry in Ch 9.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G5-NUM-02__PRM-01",
+        "name": "Tables Fluency Prerequisite for Factors and Multiples",
+        "source_or_target": "G5-NUM-02 -> PRM-01",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Rapid recall of times tables is necessary for identifying factors without tedious trial and error.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G5-NUM-02__FRC-05",
+        "name": "Tables Fluency Prerequisite for Equivalent Fractions",
+        "source_or_target": "G5-NUM-02 -> FRC-05",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Multiplying numerator and denominator requires instant multiplication table fluency.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G5-NUM-03__PRM-02",
+        "name": "Division Intuition Prerequisite for Divisibility Rules",
+        "source_or_target": "G5-NUM-03 -> PRM-02",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Division as equal grouping is required before learning divisibility shortcuts.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G5-NUM-03__FRC-01",
+        "name": "Equal Sharing Prerequisite for Unit Fractions",
+        "source_or_target": "G5-NUM-03 -> FRC-01",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Equal partitioning of a collection or shape is the foundational basis for 1/n fractions.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G5-FRC-01__FRC-01",
+        "name": "Half/Quarter Intuition Prerequisite for General Fractions",
+        "source_or_target": "G5-FRC-01 -> FRC-01",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Recognizing 1/2 and 1/4 in concrete objects precedes formal symbolic fraction notation.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G5-GEO-01__LIN-01",
+        "name": "2D Shapes Prerequisite for Lines and Angles",
+        "source_or_target": "G5-GEO-01 -> LIN-01",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Familiarity with polygons precedes formal definitions of point, line, and ray.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G5-GEO-01__PER-01",
+        "name": "2D Shapes Prerequisite for Perimeter",
+        "source_or_target": "G5-GEO-01 -> PER-01",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Knowing shape boundaries precedes computing total perimeter.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G5-GEO-02__LIN-02",
+        "name": "Ruler Measurement Prerequisite for Line Segments",
+        "source_or_target": "G5-GEO-02 -> LIN-02",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Accurate 0-mark alignment on 15 cm ruler is prerequisite for Class 6 line segment drawing.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G5-GEO-02__CON-01",
+        "name": "Ruler Measurement Prerequisite for Compass Construction",
+        "source_or_target": "G5-GEO-02 -> CON-01",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Setting compass radius against ruler requires prior ruler reading fluency.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G5-DAT-01__DAT-01",
+        "name": "Pictographs Prerequisite for Tally Marks & Bar Graphs",
+        "source_or_target": "G5-DAT-01 -> DAT-01",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Grouping data with symbols in Grade 5 leads directly to tally groups and bar charts in Grade 6.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G4-NUM-01__NUM-04",
+        "name": "Class 4 Addition/Subtraction Prerequisite for Large Number Operations",
+        "source_or_target": "G4-NUM-01 -> NUM-04",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Regrouping fluency in 4-digit numbers precedes operations on 6-8 digit numbers.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "G4-NUM-02__PAT-03",
+        "name": "Skip Counting Prerequisite for Number Sequences",
+        "source_or_target": "G4-NUM-02 -> PAT-03",
+        "relation": "prerequisite_of",
+        "description": "Prior Grade Prerequisite: Verbal skip counting precedes algebraic sequence pattern recognition.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "SCI-INT-01__INT-01",
+        "name": "Thermometer Celsius Scale Contextualises Negative Integers",
+        "source_or_target": "SCI-INT-01 -> INT-01",
+        "relation": "contextualised_by",
+        "description": "Science Context: Sub-zero thermometer readings (-5°C) provide concrete physical grounding for negative numbers.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "GEO-INT-01__INT-01",
+        "name": "Sea Level Elevation/Depth Contextualises Opposite Integers",
+        "source_or_target": "GEO-INT-01 -> INT-01",
+        "relation": "contextualised_by",
+        "description": "Geography Context: Height above sea level (+m) and depth below sea level (-m) ground integer signs in real terrain.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "GEO-INT-01__INT-02",
+        "name": "Sea Level Benchmark Contextualises Zero as Neutral Datum",
+        "source_or_target": "GEO-INT-01 -> INT-02",
+        "relation": "contextualised_by",
+        "description": "Geography Context: Sea level as exactly 0 meter clarifies why 0 is neither positive nor negative.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "SCI-DAT-01__DAT-04",
+        "name": "Rainfall Tracking Contextualises Data Handling in Science",
+        "source_or_target": "SCI-DAT-01 -> DAT-04",
+        "relation": "contextualised_by",
+        "description": "Science Context: Environmental rainfall tables demonstrate real-world utility of tally marks and frequency charts.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "BIO-SYM-01__SYM-01",
+        "name": "Biological Organisms Contextualise Reflectional Symmetry",
+        "source_or_target": "BIO-SYM-01 -> SYM-01",
+        "relation": "contextualised_by",
+        "description": "Biology Context: Butterfly wings and leaf veins show line symmetry evolved in living organisms.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "BIO-SYM-01__SYM-02",
+        "name": "Starfish and Flowers Contextualise Radial Symmetry",
+        "source_or_target": "BIO-SYM-01 -> SYM-02",
+        "relation": "contextualised_by",
+        "description": "Biology Context: Five-pointed starfish and six-petal flowers demonstrate rotational and multi-axis symmetry.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "SCI-FRC-01__FRC-08",
+        "name": "Chemical Dilution Ratios Contextualise Rational Fractions",
+        "source_or_target": "SCI-FRC-01 -> FRC-08",
+        "relation": "contextualised_by",
+        "description": "Chemistry Context: 1 part acid in 4 parts water (1/5 total solution) exemplifies proper fraction mixtures.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "PHY-LIN-01__LIN-05",
+        "name": "Compass Bearings Contextualise Angles in Physics/Navigation",
+        "source_or_target": "PHY-LIN-01 -> LIN-05",
+        "relation": "contextualised_by",
+        "description": "Navigation Context: Navigational bearings (East = 90°, South = 180°) contextualise angles as clockwise rotations.",
+        "status": "verified"
+      },
+      {
+        "record_type": "edge",
+        "id": "ART-PAT-01__PAT-01",
+        "name": "Architectural Tile Tessellations Contextualise Geometric Patterns",
+        "source_or_target": "ART-PAT-01 -> PAT-01",
+        "relation": "contextualised_by",
+        "description": "Art Context: Rangoli and mosaic tiling show mathematical pattern-finding in human culture and heritage.",
+        "status": "verified"
       }
     ],
     "misconception": [

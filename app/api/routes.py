@@ -609,6 +609,53 @@ def get_chapter_knowledge_graph(chapter_id: str):
         "mastery_rules": chapter_mastery_rules
     }
 
+@router.get("/knowledge-graph/cross-network")
+def get_cross_network_knowledge_graph():
+    kg = _load_knowledge_graph()
+    records = kg.get("records_by_type", {})
+    all_concepts = records.get("concept", [])
+    all_edges = records.get("edge", [])
+    
+    prior_grade_concepts = [c for c in all_concepts if c.get("id", "").startswith("G4-") or c.get("id", "").startswith("G5-")]
+    cross_subject_concepts = [c for c in all_concepts if any(c.get("id", "").startswith(p) for p in ["SCI-", "GEO-", "BIO-", "PHY-", "ART-"])]
+    
+    cross_chapter_edges = []
+    cross_class_edges = []
+    cross_subject_edges = []
+    intra_chapter_edges = []
+    
+    for e in all_edges:
+        st = e.get("source_or_target", "")
+        if "->" in st:
+            s, t = [x.strip() for x in st.split("->")]
+            if s.startswith("G4-") or s.startswith("G5-"):
+                cross_class_edges.append(e)
+            elif any(s.startswith(p) for p in ["SCI-", "GEO-", "BIO-", "PHY-", "ART-"]):
+                cross_subject_edges.append(e)
+            elif s.split("-")[0] != t.split("-")[0]:
+                cross_chapter_edges.append(e)
+            else:
+                intra_chapter_edges.append(e)
+                
+    return {
+        "summary": {
+            "total_concepts": len(all_concepts),
+            "class_6_concepts": len(all_concepts) - len(prior_grade_concepts) - len(cross_subject_concepts),
+            "prior_grade_concepts": len(prior_grade_concepts),
+            "cross_subject_concepts": len(cross_subject_concepts),
+            "total_edges": len(all_edges),
+            "intra_chapter_edges": len(intra_chapter_edges),
+            "cross_chapter_edges": len(cross_chapter_edges),
+            "cross_class_edges": len(cross_class_edges),
+            "cross_subject_edges": len(cross_subject_edges)
+        },
+        "prior_grade_concepts": prior_grade_concepts,
+        "cross_subject_concepts": cross_subject_concepts,
+        "cross_chapter_edges": cross_chapter_edges,
+        "cross_class_edges": cross_class_edges,
+        "cross_subject_edges": cross_subject_edges
+    }
+
 @router.get("/knowledge-graph/full")
 def get_full_knowledge_graph():
     return _load_knowledge_graph()
