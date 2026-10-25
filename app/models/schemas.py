@@ -247,3 +247,21 @@ class CustomQuestionCreateRequest(BaseModel):
     scoring_cautions: Optional[str] = None
     author: Optional[str] = "Teacher SME"
 
+class ConceptCreateRequest(BaseModel):
+    id: Optional[str] = None
+    chapter_id: str
+    name: str
+    description: str
+    domain: Optional[str] = None
+    class_level: Optional[int] = 6
+    prerequisites: Optional[List[str]] = []
+    author: Optional[str] = "Teacher SME"
+
+class EdgeCreateRequest(BaseModel):
+    source_id: str
+    target_id: str
+    relation: str = "prerequisite_for"
+    description: Optional[str] = None
+    author: Optional[str] = "Teacher SME"
+
+

@@ -44,7 +44,9 @@ from app.models.schemas import (
     RecordUpdateRequest,
     RecordVerifyRequest,
     RoleUpdateRequest,
-    CustomQuestionCreateRequest
+    CustomQuestionCreateRequest,
+    ConceptCreateRequest,
+    EdgeCreateRequest
 )
 
 def hash_password(password: str) -> str:
@@ -860,4 +862,145 @@ def create_custom_question(payload: CustomQuestionCreateRequest):
         "question_id": q_id,
         "assessment_id": spec_id,
         "record": new_record
+    }
+
+
+@router.post("/knowledge-graph/concept/create")
+def create_concept(payload: ConceptCreateRequest):
+    kg = _load_knowledge_graph()
+    concepts = kg.get("records_by_type", {}).setdefault("concept", [])
+    
+    prefix = payload.chapter_id.upper().replace("CH0", "").replace("CH", "")
+    for ch in kg.get("chapters", []):
+        if ch.get("id", "").lower() == payload.chapter_id.lower() or str(ch.get("number")) == str(payload.chapter_id) or ch.get("prefix", "").lower() == payload.chapter_id.lower():
+            prefix = ch.get("prefix")
+            break
+
+    if payload.id:
+        cid = payload.id.strip().upper()
+    else:
+        existing_nums = []
+        for c in concepts:
+            if c.get("id", "").startswith(f"{prefix}-"):
+                try:
+                    num = int(c.get("id", "").split("-")[1])
+                    existing_nums.append(num)
+                except:
+                    pass
+        next_num = max(existing_nums, default=0) + 1
+        cid = f"{prefix}-{next_num:02d}"
+
+    if any(c.get("id") == cid for c in concepts):
+        raise HTTPException(status_code=400, detail=f"Concept ID {cid} already exists.")
+
+    from datetime import datetime
+    new_concept = {
+        "record_type": "concept",
+        "id": cid,
+        "name": payload.name.strip(),
+        "description": payload.description.strip(),
+        "domain": payload.domain or "NCERT Grade 6",
+        "class_level": payload.class_level or 6,
+        "status": "verified",
+        "verified_by": payload.author or "Teacher SME",
+        "verified_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.utcnow().isoformat()
+    }
+    concepts.append(new_concept)
+
+    created_edges = []
+    if payload.prerequisites:
+        for prereq_id in payload.prerequisites:
+            prereq_id = prereq_id.strip()
+            edge_id = f"EDG-{prereq_id}-{cid}"
+            edge_record = {
+                "record_type": "edge",
+                "id": edge_id,
+                "name": f"Prerequisite: {prereq_id} -> {cid}",
+                "source_or_target": f"{prereq_id} -> {cid}",
+                "relation": "prerequisite_for",
+                "description": f"Foundational understanding of {prereq_id} required before {cid}.",
+                "status": "verified",
+                "verified_by": payload.author or "Teacher SME",
+                "verified_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.utcnow().isoformat()
+            }
+            kg.get("records_by_type", {}).setdefault("edge", []).append(edge_record)
+            created_edges.append(edge_record)
+
+    _save_knowledge_graph(kg)
+    return {
+        "message": f"Concept {cid} successfully created.",
+        "concept": new_concept,
+        "created_edges": created_edges
+    }
+
+@router.post("/knowledge-graph/edge/create")
+def create_edge(payload: EdgeCreateRequest):
+    kg = _load_knowledge_graph()
+    edges = kg.get("records_by_type", {}).setdefault("edge", [])
+    
+    src = payload.source_id.strip().upper()
+    tgt = payload.target_id.strip().upper()
+    edge_id = f"EDG-{src}-{tgt}"
+    source_or_target = f"{src} -> {tgt}"
+
+    for e in edges:
+        if e.get("source_or_target") == source_or_target or e.get("id") == edge_id:
+            raise HTTPException(status_code=400, detail=f"Correlation edge between {source_or_target} already exists.")
+
+    from datetime import datetime
+    new_edge = {
+        "record_type": "edge",
+        "id": edge_id,
+        "name": f"Correlation: {source_or_target}",
+        "source_or_target": source_or_target,
+        "relation": payload.relation or "prerequisite_for",
+        "description": payload.description or f"Dependency pathway: mastering {src} unlocks {tgt}.",
+        "status": "verified",
+        "verified_by": payload.author or "Teacher SME",
+        "verified_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.utcnow().isoformat()
+    }
+    edges.append(new_edge)
+    _save_knowledge_graph(kg)
+
+    return {
+        "message": f"Dependency edge {source_or_target} successfully established.",
+        "edge": new_edge
+    }
+
+@router.delete("/knowledge-graph/record/{record_id}")
+def delete_knowledge_graph_record(record_id: str):
+    kg = _load_knowledge_graph()
+    records = kg.get("records_by_type", {})
+    deleted = None
+    target_type = None
+
+    for r_type, r_list in records.items():
+        for i, item in enumerate(r_list):
+            if item.get("id") == record_id:
+                deleted = r_list.pop(i)
+                target_type = r_type
+                break
+        if deleted:
+            break
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Record {record_id} not found in Knowledge Graph")
+
+    removed_edges_count = 0
+    if target_type == "concept":
+        edges = records.get("edge", [])
+        records["edge"] = [
+            e for e in edges
+            if record_id not in [x.strip() for x in e.get("source_or_target", "").split("->")]
+        ]
+        removed_edges_count = len(edges) - len(records["edge"])
+
+    _save_knowledge_graph(kg)
+    return {
+        "message": f"Record {record_id} successfully deleted from Knowledge Graph.",
+        "record_type": target_type,
+        "removed_edges_count": removed_edges_count
     }
