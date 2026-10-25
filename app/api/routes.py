@@ -40,7 +40,11 @@ from app.models.schemas import (
     ProfileUpdateRequest,
     ModeratorApprovalRequest,
     ModeratorSettingsRequest,
-    ModeratorQueueItem
+    ModeratorQueueItem,
+    RecordUpdateRequest,
+    RecordVerifyRequest,
+    RoleUpdateRequest,
+    CustomQuestionCreateRequest
 )
 
 def hash_password(password: str) -> str:
@@ -64,6 +68,10 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
             section="A"
         )
         db.add(user)
+        db.commit()
+        db.refresh(user)
+    elif payload.role and user.role != payload.role:
+        user.role = payload.role
         db.commit()
         db.refresh(user)
 
@@ -152,6 +160,31 @@ def update_user_profile(payload: ProfileUpdateRequest, db: Session = Depends(get
     db.commit()
     db.refresh(user)
 
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        grade_level=user.grade_level,
+        section=user.section,
+        school_id=user.school_id,
+        target_goal=user.target_goal,
+        token=f"prd_sess_{user.id}"
+    )
+
+
+@router.patch("/auth/user/{user_id}/role", response_model=UserResponse)
+def update_user_role(user_id: str, payload: RoleUpdateRequest, db: Session = Depends(get_db)):
+    """Assigns or updates a user's role (STUDENT, TEACHER, PARENT, ADMIN)."""
+    user = db.query(UserDB).filter_by(id=user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    valid_roles = ["STUDENT", "TEACHER", "PARENT", "ADMIN"]
+    if payload.role.upper() not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of {valid_roles}")
+    user.role = payload.role.upper()
+    db.commit()
+    db.refresh(user)
     return UserResponse(
         id=user.id,
         email=user.email,
@@ -659,3 +692,172 @@ def get_cross_network_knowledge_graph():
 @router.get("/knowledge-graph/full")
 def get_full_knowledge_graph():
     return _load_knowledge_graph()
+
+
+def _save_knowledge_graph(kg):
+    global _KG_CACHE
+    _KG_CACHE = kg
+    kg_path = Path(__file__).resolve().parent.parent / "data" / "class6_knowledge_graph.json"
+    with open(kg_path, "w", encoding="utf-8") as f:
+        json.dump(kg, f, indent=2, ensure_ascii=False)
+        
+    frontend_kg_path = Path(__file__).resolve().parent.parent.parent / "frontend" / "src" / "data" / "class6_knowledge_graph.json"
+    if frontend_kg_path.parent.exists():
+        with open(frontend_kg_path, "w", encoding="utf-8") as f:
+            json.dump(kg, f, indent=2, ensure_ascii=False)
+
+@router.put("/knowledge-graph/record/{record_id}")
+def update_knowledge_graph_record(record_id: str, payload: RecordUpdateRequest):
+    kg = _load_knowledge_graph()
+    records = kg.get("records_by_type", {})
+    found = None
+    target_type = None
+
+    for r_type, r_list in records.items():
+        for item in r_list:
+            if item.get("id") == record_id:
+                found = item
+                target_type = r_type
+                break
+        if found:
+            break
+
+    if not found:
+        raise HTTPException(status_code=404, detail=f"Record {record_id} not found in Knowledge Graph")
+
+    if payload.name is not None:
+        found["name"] = payload.name
+    if payload.description is not None:
+        found["description"] = payload.description
+    if payload.evidence_or_trigger is not None:
+        found["evidence_or_trigger"] = payload.evidence_or_trigger
+    if payload.intervention_or_followup is not None:
+        found["intervention_or_followup"] = payload.intervention_or_followup
+    if payload.source_or_target is not None:
+        found["source_or_target"] = payload.source_or_target
+    if payload.relation is not None:
+        found["relation"] = payload.relation
+    if payload.status is not None:
+        found["status"] = payload.status
+    if payload.verified_by is not None:
+        found["verified_by"] = payload.verified_by
+    if payload.verification_notes is not None:
+        found["verification_notes"] = payload.verification_notes
+
+    from datetime import datetime
+    found["updated_at"] = datetime.utcnow().isoformat()
+    _save_knowledge_graph(kg)
+    return {"message": "Record updated successfully", "record": found, "record_type": target_type}
+
+@router.post("/knowledge-graph/verify/{record_id}")
+def verify_knowledge_graph_record(record_id: str, payload: RecordVerifyRequest):
+    kg = _load_knowledge_graph()
+    records = kg.get("records_by_type", {})
+    found = None
+    target_type = None
+
+    for r_type, r_list in records.items():
+        for item in r_list:
+            if item.get("id") == record_id:
+                found = item
+                target_type = r_type
+                break
+        if found:
+            break
+
+    if not found:
+        raise HTTPException(status_code=404, detail=f"Record {record_id} not found in Knowledge Graph")
+
+    from datetime import datetime
+    found["status"] = payload.status
+    found["verified_by"] = payload.verified_by
+    found["verification_notes"] = payload.verification_notes
+    found["verified_at"] = datetime.utcnow().isoformat()
+    found["updated_at"] = datetime.utcnow().isoformat()
+
+    _save_knowledge_graph(kg)
+    return {"message": f"Record {record_id} marked as {payload.status}", "record": found, "record_type": target_type}
+
+@router.get("/knowledge-graph/verification-stats")
+def get_verification_stats():
+    kg = _load_knowledge_graph()
+    records = kg.get("records_by_type", {})
+    all_items = []
+    for r_type, r_list in records.items():
+        all_items.extend(r_list)
+
+    total_records = len(all_items)
+    verified = sum(1 for item in all_items if item.get("status") == "verified")
+    needs_revision = sum(1 for item in all_items if item.get("status") == "needs_revision")
+    pending = total_records - verified - needs_revision
+
+    chapters_stats = []
+    for ch in kg.get("chapters", []):
+        prefix = ch.get("prefix", "")
+        ch_items = [it for it in all_items if it.get("id", "").startswith(prefix) or (prefix in str(it.get("source_or_target", "")))]
+        ch_total = len(ch_items)
+        ch_verified = sum(1 for it in ch_items if it.get("status") == "verified")
+        ch_revision = sum(1 for it in ch_items if it.get("status") == "needs_revision")
+        ch_pending = ch_total - ch_verified - ch_revision
+        chapters_stats.append({
+            "chapter_id": ch.get("id"),
+            "chapter_name": ch.get("name"),
+            "prefix": prefix,
+            "total": ch_total,
+            "verified": ch_verified,
+            "needs_revision": ch_revision,
+            "pending": ch_pending,
+            "completion_pct": round((ch_verified / ch_total * 100), 1) if ch_total > 0 else 0
+        })
+
+    return {
+        "total_records": total_records,
+        "verified": verified,
+        "needs_revision": needs_revision,
+        "pending": pending,
+        "completion_pct": round((verified / total_records * 100), 1) if total_records > 0 else 0,
+        "chapters": chapters_stats
+    }
+
+@router.post("/knowledge-graph/question/create")
+def create_custom_question(payload: CustomQuestionCreateRequest):
+    import uuid
+    from datetime import datetime
+    q_id = f"q_custom_{uuid.uuid4().hex[:8]}"
+    spec_id = f"AS-CUSTOM-{uuid.uuid4().hex[:6].upper()}"
+
+    new_q = Question(
+        id=q_id,
+        concept_id=payload.concept_id,
+        concept_name=payload.title,
+        title=payload.title,
+        prompt=payload.prompt,
+        options=payload.options,
+        difficulty=payload.difficulty or "medium"
+    )
+    QUESTIONS_DB[q_id] = new_q
+
+    kg = _load_knowledge_graph()
+    new_record = {
+        "record_type": "assessment",
+        "id": spec_id,
+        "name": payload.title,
+        "source_or_target": payload.concept_id,
+        "relation": "assesses",
+        "description": payload.prompt,
+        "evidence_or_trigger": f"Options: {[opt.text for opt in payload.options]}",
+        "intervention_or_followup": payload.scoring_cautions or "Scored according to teacher distractor rubric.",
+        "status": "verified",
+        "verified_by": payload.author or "Teacher SME",
+        "verified_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.utcnow().isoformat()
+    }
+    kg.get("records_by_type", {}).setdefault("assessment", []).append(new_record)
+    _save_knowledge_graph(kg)
+
+    return {
+        "message": "Question and Assessment Specification successfully created and verified.",
+        "question_id": q_id,
+        "assessment_id": spec_id,
+        "record": new_record
+    }

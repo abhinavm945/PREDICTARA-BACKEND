@@ -191,6 +191,11 @@ class ProfileUpdateRequest(BaseModel):
     grade_level: Optional[int] = None
     subject: Optional[str] = None
     target_goal: Optional[str] = None
+    role: Optional[str] = None
+
+class RoleUpdateRequest(BaseModel):
+    role: str # 'STUDENT', 'TEACHER', 'PARENT', 'ADMIN'
+
 
 class ModeratorApprovalRequest(BaseModel):
     teacher_remarks: Optional[str] = None
@@ -212,3 +217,33 @@ class ModeratorQueueItem(BaseModel):
     detected_gap: str
     teacher_remarks: Optional[str] = ""
     dispatched_at: Optional[str] = None
+
+# -------------------------------------------------------------
+# Teacher Verification & Curriculum Modification Schemas
+# -------------------------------------------------------------
+class RecordUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    evidence_or_trigger: Optional[str] = None
+    intervention_or_followup: Optional[str] = None
+    source_or_target: Optional[str] = None
+    relation: Optional[str] = None
+    status: Optional[str] = None
+    verified_by: Optional[str] = None
+    verification_notes: Optional[str] = None
+
+class RecordVerifyRequest(BaseModel):
+    status: str = "verified" # 'verified' | 'needs_revision' | 'draft'
+    verified_by: str = "Teacher SME"
+    verification_notes: Optional[str] = ""
+
+class CustomQuestionCreateRequest(BaseModel):
+    concept_id: str
+    chapter_id: Optional[str] = None
+    title: str
+    prompt: str
+    options: List[QuestionOption]
+    difficulty: Optional[str] = "medium"
+    scoring_cautions: Optional[str] = None
+    author: Optional[str] = "Teacher SME"
+
