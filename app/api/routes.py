@@ -32,7 +32,7 @@ import uuid
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models.db_models import UserDB, SchoolDB, AssessmentAttemptDB, AttemptEvidenceDB, DiagnosticReportDB
+from app.models.db_models import UserDB, SchoolDB, AssessmentAttemptDB, AttemptEvidenceDB, DiagnosticReportDB, ChapterDB, CurriculumRecordDB
 from app.models.schemas import (
     LoginRequest,
     RegisterRequest,
@@ -555,104 +555,154 @@ def get_learning_module_by_concept(concept_id: str):
 
 # =====================================================================
 # Class 6th Mathematics Concept Intelligence Graph (CIG) Endpoints
-# NCERT Ganita Prakash (Grade 6) - All 10 Chapters
+# Stored & Managed 100% in SQL Database (PostgreSQL / SQLite)
 # =====================================================================
 
 import json
+from datetime import datetime
 from pathlib import Path
 
-_KG_CACHE = None
-
-def _load_knowledge_graph():
-    global _KG_CACHE
-    if _KG_CACHE is not None:
-        return _KG_CACHE
-    kg_path = Path(__file__).resolve().parent.parent / "data" / "class6_knowledge_graph.json"
-    if kg_path.exists():
-        with open(kg_path, "r", encoding="utf-8") as f:
-            _KG_CACHE = json.load(f)
-            return _KG_CACHE
+def _record_to_dict(rec: CurriculumRecordDB):
     return {
-        "title": "Predictara Class 6 Mathematics Concept Intelligence Graph",
-        "chapters": [],
-        "records_by_type": {"concept": [], "edge": [], "misconception": [], "assessment": [], "intervention": [], "mastery_rule": []}
+        "record_type": rec.record_type,
+        "id": rec.id,
+        "name": rec.name,
+        "description": rec.description or "",
+        "source_or_target": rec.source_or_target or "",
+        "relation": rec.relation or "",
+        "evidence_or_trigger": rec.evidence_or_trigger or "",
+        "intervention_or_followup": rec.intervention_or_followup or "",
+        "domain": rec.domain or "",
+        "class_level": rec.class_level or 6,
+        "subject": rec.subject or "Mathematics",
+        "status": rec.status or "draft",
+        "verified_by": rec.verified_by,
+        "verified_at": rec.verified_at.isoformat() if rec.verified_at else None,
+        "verification_notes": rec.verification_notes or "",
+        "updated_at": rec.updated_at.isoformat() if rec.updated_at else None,
     }
 
+def _save_knowledge_graph_fallback(db: Session):
+    """Syncs SQL database records back to local JSON files for offline export/backup."""
+    try:
+        chapters = db.query(ChapterDB).order_by(ChapterDB.number).all()
+        records = db.query(CurriculumRecordDB).all()
+        
+        ch_list = [{
+            "id": c.id, "number": c.number, "name": c.name,
+            "prefix": c.prefix, "domain": c.domain, "pages": c.pages
+        } for c in chapters]
+        
+        rec_by_type = {
+            "concept": [], "edge": [], "misconception": [],
+            "assessment": [], "intervention": [], "mastery_rule": []
+        }
+        for r in records:
+            rec_by_type.setdefault(r.record_type, []).append(_record_to_dict(r))
+            
+        full_kg = {
+            "title": "Predictara Class 6 Mathematics Concept Intelligence Graph",
+            "chapters": ch_list,
+            "records_by_type": rec_by_type
+        }
+        
+        kg_path = Path(__file__).resolve().parent.parent / "data" / "class6_knowledge_graph.json"
+        with open(kg_path, "w", encoding="utf-8") as f:
+            json.dump(full_kg, f, indent=2, ensure_ascii=False)
+            
+        frontend_kg_path = Path(__file__).resolve().parent.parent.parent / "frontend" / "src" / "data" / "class6_knowledge_graph.json"
+        if frontend_kg_path.parent.exists():
+            with open(frontend_kg_path, "w", encoding="utf-8") as f:
+                json.dump(full_kg, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Fallback JSON sync skipped: {e}")
+
 @router.get("/knowledge-graph/chapters")
-def get_knowledge_graph_chapters():
-    kg = _load_knowledge_graph()
+def get_knowledge_graph_chapters(db: Session = Depends(get_db)):
+    """Fetches chapter list and concept counts directly from SQL database."""
+    chapters_db = db.query(ChapterDB).order_by(ChapterDB.number).all()
     chapters = []
-    concepts = kg.get("records_by_type", {}).get("concept", [])
-    for ch in kg.get("chapters", []):
-        prefix = ch.get("prefix", "")
-        ch_concepts = [c for c in concepts if c.get("id", "").startswith(prefix)]
+    for ch in chapters_db:
+        concept_count = db.query(CurriculumRecordDB).filter(
+            CurriculumRecordDB.record_type == "concept",
+            CurriculumRecordDB.id.like(f"{ch.prefix}-%")
+        ).count()
         chapters.append({
-            "id": ch.get("id"),
-            "number": ch.get("number"),
-            "name": ch.get("name"),
-            "prefix": prefix,
-            "domain": ch.get("domain"),
-            "pages": ch.get("pages"),
-            "concept_count": len(ch_concepts)
+            "id": ch.id,
+            "number": ch.number,
+            "name": ch.name,
+            "prefix": ch.prefix,
+            "domain": ch.domain,
+            "pages": ch.pages,
+            "concept_count": concept_count
         })
     return {"total_chapters": len(chapters), "chapters": chapters}
 
 @router.get("/knowledge-graph/chapter/{chapter_id}")
-def get_chapter_knowledge_graph(chapter_id: str):
-    kg = _load_knowledge_graph()
-    prefix = chapter_id.upper().replace("CH0", "").replace("CH", "")
-    for ch in kg.get("chapters", []):
-        if ch.get("id", "").lower() == chapter_id.lower() or str(ch.get("number")) == str(chapter_id) or ch.get("prefix", "").lower() == chapter_id.lower():
-            prefix = ch.get("prefix")
-            break
-            
-    records = kg.get("records_by_type", {})
-    chapter_concepts = [c for c in records.get("concept", []) if c.get("id", "").startswith(prefix)]
-    concept_ids = set(c["id"] for c in chapter_concepts)
+def get_chapter_knowledge_graph(chapter_id: str, db: Session = Depends(get_db)):
+    """Fetches a chapter's concepts, edges, traps, and rubrics directly from SQL database."""
+    ch = db.query(ChapterDB).filter(
+        (ChapterDB.id.ilike(chapter_id)) | 
+        (ChapterDB.prefix.ilike(chapter_id))
+    ).first()
     
+    prefix = ch.prefix if ch else chapter_id.upper().replace("CH0", "").replace("CH", "")
+    
+    # 1. Concepts
+    concepts = db.query(CurriculumRecordDB).filter(
+        CurriculumRecordDB.record_type == "concept",
+        CurriculumRecordDB.id.like(f"{prefix}-%")
+    ).all()
+    concept_ids = set(c.id for c in concepts)
+    
+    # 2. Edges
+    all_edges = db.query(CurriculumRecordDB).filter_by(record_type="edge").all()
     chapter_edges = [
-        e for e in records.get("edge", []) 
-        if any(cid in e.get("source_or_target", "") for cid in concept_ids)
+        _record_to_dict(e) for e in all_edges 
+        if any(cid in (e.source_or_target or "") for cid in concept_ids)
     ]
-    chapter_misconceptions = [
-        m for m in records.get("misconception", [])
-        if any(cid in m.get("source_or_target", "") for cid in concept_ids) or prefix in m.get("id", "")
+    
+    # 3. Misconceptions
+    all_misc = db.query(CurriculumRecordDB).filter_by(record_type="misconception").all()
+    chapter_misc = [
+        _record_to_dict(m) for m in all_misc
+        if any(cid in (m.source_or_target or "") for cid in concept_ids) or prefix in m.id
     ]
-    chapter_assessments = [
-        a for a in records.get("assessment", [])
-        if any(cid in a.get("source_or_target", "") for cid in concept_ids) or prefix in a.get("id", "")
+    
+    # 4. Assessments
+    all_assess = db.query(CurriculumRecordDB).filter_by(record_type="assessment").all()
+    chapter_assess = [
+        _record_to_dict(a) for a in all_assess
+        if any(cid in (a.source_or_target or "") for cid in concept_ids) or prefix in a.id
     ]
-    chapter_interventions = [
-        i for i in records.get("intervention", [])
-        if any(cid in i.get("source_or_target", "") for cid in concept_ids) or prefix in i.get("id", "")
-    ]
-    chapter_mastery_rules = [
-        r for r in records.get("mastery_rule", [])
-        if any(cid in r.get("source_or_target", "") for cid in concept_ids) or prefix in r.get("id", "")
+    
+    # 5. Interventions
+    all_intv = db.query(CurriculumRecordDB).filter_by(record_type="intervention").all()
+    chapter_intv = [
+        _record_to_dict(i) for i in all_intv
+        if any(cid in (i.source_or_target or "") for cid in concept_ids) or prefix in i.id
     ]
     
     return {
         "chapter_id": chapter_id,
         "prefix": prefix,
-        "concepts_count": len(chapter_concepts),
-        "concepts": chapter_concepts,
+        "concepts_count": len(concepts),
+        "concepts": [_record_to_dict(c) for c in concepts],
         "edges_count": len(chapter_edges),
         "edges": chapter_edges,
-        "misconceptions": chapter_misconceptions,
-        "assessments": chapter_assessments,
-        "interventions": chapter_interventions,
-        "mastery_rules": chapter_mastery_rules
+        "misconceptions": chapter_misc,
+        "assessments": chapter_assess,
+        "interventions": chapter_intv,
     }
 
 @router.get("/knowledge-graph/cross-network")
-def get_cross_network_knowledge_graph():
-    kg = _load_knowledge_graph()
-    records = kg.get("records_by_type", {})
-    all_concepts = records.get("concept", [])
-    all_edges = records.get("edge", [])
+def get_cross_network_knowledge_graph(db: Session = Depends(get_db)):
+    """Fetches cross-chapter bridges, prior grade roots, and STEM anchors from SQL database."""
+    all_concepts = db.query(CurriculumRecordDB).filter_by(record_type="concept").all()
+    all_edges = db.query(CurriculumRecordDB).filter_by(record_type="edge").all()
     
-    prior_grade_concepts = [c for c in all_concepts if c.get("id", "").startswith("G4-") or c.get("id", "").startswith("G5-")]
-    cross_subject_concepts = [c for c in all_concepts if any(c.get("id", "").startswith(p) for p in ["SCI-", "GEO-", "BIO-", "PHY-", "ART-"])]
+    prior_grade_concepts = [c for c in all_concepts if c.id.startswith("G4-") or c.id.startswith("G5-")]
+    cross_subject_concepts = [c for c in all_concepts if any(c.id.startswith(p) for p in ["SCI-", "GEO-", "BIO-", "PHY-", "ART-"])]
     
     cross_chapter_edges = []
     cross_class_edges = []
@@ -660,17 +710,17 @@ def get_cross_network_knowledge_graph():
     intra_chapter_edges = []
     
     for e in all_edges:
-        st = e.get("source_or_target", "")
+        st = e.source_or_target or ""
         if "->" in st:
             s, t = [x.strip() for x in st.split("->")]
             if s.startswith("G4-") or s.startswith("G5-"):
-                cross_class_edges.append(e)
+                cross_class_edges.append(_record_to_dict(e))
             elif any(s.startswith(p) for p in ["SCI-", "GEO-", "BIO-", "PHY-", "ART-"]):
-                cross_subject_edges.append(e)
+                cross_subject_edges.append(_record_to_dict(e))
             elif s.split("-")[0] != t.split("-")[0]:
-                cross_chapter_edges.append(e)
+                cross_chapter_edges.append(_record_to_dict(e))
             else:
-                intra_chapter_edges.append(e)
+                intra_chapter_edges.append(_record_to_dict(e))
                 
     return {
         "summary": {
@@ -684,126 +734,99 @@ def get_cross_network_knowledge_graph():
             "cross_class_edges": len(cross_class_edges),
             "cross_subject_edges": len(cross_subject_edges)
         },
-        "prior_grade_concepts": prior_grade_concepts,
-        "cross_subject_concepts": cross_subject_concepts,
+        "prior_grade_concepts": [_record_to_dict(c) for c in prior_grade_concepts],
+        "cross_subject_concepts": [_record_to_dict(c) for c in cross_subject_concepts],
         "cross_chapter_edges": cross_chapter_edges,
         "cross_class_edges": cross_class_edges,
         "cross_subject_edges": cross_subject_edges
     }
 
 @router.get("/knowledge-graph/full")
-def get_full_knowledge_graph():
-    return _load_knowledge_graph()
-
-
-def _save_knowledge_graph(kg):
-    global _KG_CACHE
-    _KG_CACHE = kg
-    kg_path = Path(__file__).resolve().parent.parent / "data" / "class6_knowledge_graph.json"
-    with open(kg_path, "w", encoding="utf-8") as f:
-        json.dump(kg, f, indent=2, ensure_ascii=False)
+def get_full_knowledge_graph(db: Session = Depends(get_db)):
+    """Exports full CIG dataset directly from SQL database."""
+    chapters = db.query(ChapterDB).order_by(ChapterDB.number).all()
+    records = db.query(CurriculumRecordDB).all()
+    
+    ch_list = [{
+        "id": c.id, "number": c.number, "name": c.name,
+        "prefix": c.prefix, "domain": c.domain, "pages": c.pages
+    } for c in chapters]
+    
+    rec_by_type = {
+        "concept": [], "edge": [], "misconception": [],
+        "assessment": [], "intervention": [], "mastery_rule": []
+    }
+    for r in records:
+        rec_by_type.setdefault(r.record_type, []).append(_record_to_dict(r))
         
-    frontend_kg_path = Path(__file__).resolve().parent.parent.parent / "frontend" / "src" / "data" / "class6_knowledge_graph.json"
-    if frontend_kg_path.parent.exists():
-        with open(frontend_kg_path, "w", encoding="utf-8") as f:
-            json.dump(kg, f, indent=2, ensure_ascii=False)
+    return {
+        "title": "Predictara Class 6 Mathematics Concept Intelligence Graph",
+        "chapters": ch_list,
+        "records_by_type": rec_by_type
+    }
 
 @router.put("/knowledge-graph/record/{record_id}")
-def update_knowledge_graph_record(record_id: str, payload: RecordUpdateRequest):
-    kg = _load_knowledge_graph()
-    records = kg.get("records_by_type", {})
-    found = None
-    target_type = None
+def update_knowledge_graph_record(record_id: str, payload: RecordUpdateRequest, db: Session = Depends(get_db)):
+    """Updates any curriculum record directly in the SQL database."""
+    rec = db.query(CurriculumRecordDB).filter_by(id=record_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail=f"Record {record_id} not found in database")
+        
+    if payload.name is not None: rec.name = payload.name
+    if payload.description is not None: rec.description = payload.description
+    if payload.evidence_or_trigger is not None: rec.evidence_or_trigger = payload.evidence_or_trigger
+    if payload.intervention_or_followup is not None: rec.intervention_or_followup = payload.intervention_or_followup
+    if payload.source_or_target is not None: rec.source_or_target = payload.source_or_target
+    if payload.relation is not None: rec.relation = payload.relation
+    if payload.status is not None: rec.status = payload.status
+    if payload.verified_by is not None: rec.verified_by = payload.verified_by
+    if payload.verification_notes is not None: rec.verification_notes = payload.verification_notes
 
-    for r_type, r_list in records.items():
-        for item in r_list:
-            if item.get("id") == record_id:
-                found = item
-                target_type = r_type
-                break
-        if found:
-            break
-
-    if not found:
-        raise HTTPException(status_code=404, detail=f"Record {record_id} not found in Knowledge Graph")
-
-    if payload.name is not None:
-        found["name"] = payload.name
-    if payload.description is not None:
-        found["description"] = payload.description
-    if payload.evidence_or_trigger is not None:
-        found["evidence_or_trigger"] = payload.evidence_or_trigger
-    if payload.intervention_or_followup is not None:
-        found["intervention_or_followup"] = payload.intervention_or_followup
-    if payload.source_or_target is not None:
-        found["source_or_target"] = payload.source_or_target
-    if payload.relation is not None:
-        found["relation"] = payload.relation
-    if payload.status is not None:
-        found["status"] = payload.status
-    if payload.verified_by is not None:
-        found["verified_by"] = payload.verified_by
-    if payload.verification_notes is not None:
-        found["verification_notes"] = payload.verification_notes
-
-    from datetime import datetime
-    found["updated_at"] = datetime.utcnow().isoformat()
-    _save_knowledge_graph(kg)
-    return {"message": "Record updated successfully", "record": found, "record_type": target_type}
+    rec.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(rec)
+    _save_knowledge_graph_fallback(db)
+    return {"message": "Record updated successfully in SQL database", "record": _record_to_dict(rec), "record_type": rec.record_type}
 
 @router.post("/knowledge-graph/verify/{record_id}")
-def verify_knowledge_graph_record(record_id: str, payload: RecordVerifyRequest):
-    kg = _load_knowledge_graph()
-    records = kg.get("records_by_type", {})
-    found = None
-    target_type = None
+def verify_knowledge_graph_record(record_id: str, payload: RecordVerifyRequest, db: Session = Depends(get_db)):
+    """Stamps verification status directly into the SQL database."""
+    rec = db.query(CurriculumRecordDB).filter_by(id=record_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail=f"Record {record_id} not found in database")
 
-    for r_type, r_list in records.items():
-        for item in r_list:
-            if item.get("id") == record_id:
-                found = item
-                target_type = r_type
-                break
-        if found:
-            break
+    rec.status = payload.status
+    rec.verified_by = payload.verified_by
+    rec.verification_notes = payload.verification_notes
+    rec.verified_at = datetime.utcnow()
+    rec.updated_at = datetime.utcnow()
 
-    if not found:
-        raise HTTPException(status_code=404, detail=f"Record {record_id} not found in Knowledge Graph")
-
-    from datetime import datetime
-    found["status"] = payload.status
-    found["verified_by"] = payload.verified_by
-    found["verification_notes"] = payload.verification_notes
-    found["verified_at"] = datetime.utcnow().isoformat()
-    found["updated_at"] = datetime.utcnow().isoformat()
-
-    _save_knowledge_graph(kg)
-    return {"message": f"Record {record_id} marked as {payload.status}", "record": found, "record_type": target_type}
+    db.commit()
+    db.refresh(rec)
+    _save_knowledge_graph_fallback(db)
+    return {"message": f"Record {record_id} marked as {payload.status} in SQL database", "record": _record_to_dict(rec), "record_type": rec.record_type}
 
 @router.get("/knowledge-graph/verification-stats")
-def get_verification_stats():
-    kg = _load_knowledge_graph()
-    records = kg.get("records_by_type", {})
-    all_items = []
-    for r_type, r_list in records.items():
-        all_items.extend(r_list)
-
+def get_verification_stats(db: Session = Depends(get_db)):
+    """Calculates verification stats using SQL aggregates."""
+    all_items = db.query(CurriculumRecordDB).all()
     total_records = len(all_items)
-    verified = sum(1 for item in all_items if item.get("status") == "verified")
-    needs_revision = sum(1 for item in all_items if item.get("status") == "needs_revision")
+    verified = sum(1 for item in all_items if item.status == "verified")
+    needs_revision = sum(1 for item in all_items if item.status == "needs_revision")
     pending = total_records - verified - needs_revision
 
+    chapters = db.query(ChapterDB).order_by(ChapterDB.number).all()
     chapters_stats = []
-    for ch in kg.get("chapters", []):
-        prefix = ch.get("prefix", "")
-        ch_items = [it for it in all_items if it.get("id", "").startswith(prefix) or (prefix in str(it.get("source_or_target", "")))]
+    for ch in chapters:
+        prefix = ch.prefix
+        ch_items = [it for it in all_items if it.id.startswith(prefix) or (prefix in str(it.source_or_target or ""))]
         ch_total = len(ch_items)
-        ch_verified = sum(1 for it in ch_items if it.get("status") == "verified")
-        ch_revision = sum(1 for it in ch_items if it.get("status") == "needs_revision")
+        ch_verified = sum(1 for it in ch_items if it.status == "verified")
+        ch_revision = sum(1 for it in ch_items if it.status == "needs_revision")
         ch_pending = ch_total - ch_verified - ch_revision
         chapters_stats.append({
-            "chapter_id": ch.get("id"),
-            "chapter_name": ch.get("name"),
+            "chapter_id": ch.id,
+            "chapter_name": ch.name,
             "prefix": prefix,
             "total": ch_total,
             "verified": ch_verified,
@@ -821,10 +844,146 @@ def get_verification_stats():
         "chapters": chapters_stats
     }
 
+@router.post("/knowledge-graph/concept/create")
+def create_concept(payload: ConceptCreateRequest, db: Session = Depends(get_db)):
+    """Creates a new curriculum topic directly in the SQL database."""
+    prefix = payload.chapter_id.upper().replace("CH0", "").replace("CH", "")
+    ch = db.query(ChapterDB).filter(
+        (ChapterDB.id.ilike(payload.chapter_id)) | 
+        (ChapterDB.prefix.ilike(payload.chapter_id))
+    ).first()
+    if ch:
+        prefix = ch.prefix
+
+    if payload.id:
+        cid = payload.id.strip().upper()
+    else:
+        existing = db.query(CurriculumRecordDB).filter(
+            CurriculumRecordDB.record_type == "concept",
+            CurriculumRecordDB.id.like(f"{prefix}-%")
+        ).all()
+        existing_nums = []
+        for c in existing:
+            try:
+                num = int(c.id.split("-")[1])
+                existing_nums.append(num)
+            except:
+                pass
+        next_num = max(existing_nums, default=0) + 1
+        cid = f"{prefix}-{next_num:02d}"
+
+    if db.query(CurriculumRecordDB).filter_by(id=cid).first():
+        raise HTTPException(status_code=400, detail=f"Concept ID {cid} already exists in database.")
+
+    new_concept = CurriculumRecordDB(
+        id=cid,
+        record_type="concept",
+        prefix=prefix,
+        name=payload.name.strip(),
+        description=payload.description.strip(),
+        domain=payload.domain or "NCERT Grade 6",
+        class_level=payload.class_level or 6,
+        status="verified",
+        verified_by=payload.author or "Teacher SME",
+        verified_at=datetime.utcnow()
+    )
+    db.add(new_concept)
+
+    created_edges = []
+    if payload.prerequisites:
+        for prereq_id in payload.prerequisites:
+            prereq_id = prereq_id.strip()
+            edge_id = f"EDG-{prereq_id}-{cid}"
+            edge_rec = CurriculumRecordDB(
+                id=edge_id,
+                record_type="edge",
+                prefix=prefix,
+                name=f"Prerequisite: {prereq_id} -> {cid}",
+                source_or_target=f"{prereq_id} -> {cid}",
+                relation="prerequisite_for",
+                description=f"Foundational understanding of {prereq_id} required before {cid}.",
+                status="verified",
+                verified_by=payload.author or "Teacher SME",
+                verified_at=datetime.utcnow()
+            )
+            db.add(edge_rec)
+            created_edges.append(_record_to_dict(edge_rec))
+
+    db.commit()
+    db.refresh(new_concept)
+    _save_knowledge_graph_fallback(db)
+    return {
+        "message": f"Concept {cid} successfully created in SQL database.",
+        "concept": _record_to_dict(new_concept),
+        "created_edges": created_edges
+    }
+
+@router.post("/knowledge-graph/edge/create")
+def create_edge(payload: EdgeCreateRequest, db: Session = Depends(get_db)):
+    """Wires a dependency correlation directly into the SQL database."""
+    src = payload.source_id.strip().upper()
+    tgt = payload.target_id.strip().upper()
+    edge_id = f"EDG-{src}-{tgt}"
+    source_or_target = f"{src} -> {tgt}"
+
+    existing = db.query(CurriculumRecordDB).filter(
+        (CurriculumRecordDB.id == edge_id) | 
+        (CurriculumRecordDB.source_or_target == source_or_target)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Correlation edge between {source_or_target} already exists in database.")
+
+    new_edge = CurriculumRecordDB(
+        id=edge_id,
+        record_type="edge",
+        name=f"Correlation: {source_or_target}",
+        source_or_target=source_or_target,
+        relation=payload.relation or "prerequisite_for",
+        description=payload.description or f"Dependency pathway: mastering {src} unlocks {tgt}.",
+        status="verified",
+        verified_by=payload.author or "Teacher SME",
+        verified_at=datetime.utcnow()
+    )
+    db.add(new_edge)
+    db.commit()
+    db.refresh(new_edge)
+    _save_knowledge_graph_fallback(db)
+
+    return {
+        "message": f"Dependency edge {source_or_target} successfully established in SQL database.",
+        "edge": _record_to_dict(new_edge)
+    }
+
+@router.delete("/knowledge-graph/record/{record_id}")
+def delete_knowledge_graph_record(record_id: str, db: Session = Depends(get_db)):
+    """Deletes a record and cleans up associated edges directly in the SQL database."""
+    rec = db.query(CurriculumRecordDB).filter_by(id=record_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail=f"Record {record_id} not found in database")
+
+    target_type = rec.record_type
+    db.delete(rec)
+
+    removed_edges_count = 0
+    if target_type == "concept":
+        edges = db.query(CurriculumRecordDB).filter_by(record_type="edge").all()
+        for e in edges:
+            if record_id in [x.strip() for x in (e.source_or_target or "").split("->")]:
+                db.delete(e)
+                removed_edges_count += 1
+
+    db.commit()
+    _save_knowledge_graph_fallback(db)
+    return {
+        "message": f"Record {record_id} successfully deleted from SQL database.",
+        "record_type": target_type,
+        "removed_edges_count": removed_edges_count
+    }
+
 @router.post("/knowledge-graph/question/create")
-def create_custom_question(payload: CustomQuestionCreateRequest):
+def create_custom_question(payload: CustomQuestionCreateRequest, db: Session = Depends(get_db)):
+    """Creates a custom question in the question bank and logs an assessment spec in the SQL database."""
     import uuid
-    from datetime import datetime
     q_id = f"q_custom_{uuid.uuid4().hex[:8]}"
     spec_id = f"AS-CUSTOM-{uuid.uuid4().hex[:6].upper()}"
 
@@ -839,168 +998,27 @@ def create_custom_question(payload: CustomQuestionCreateRequest):
     )
     QUESTIONS_DB[q_id] = new_q
 
-    kg = _load_knowledge_graph()
-    new_record = {
-        "record_type": "assessment",
-        "id": spec_id,
-        "name": payload.title,
-        "source_or_target": payload.concept_id,
-        "relation": "assesses",
-        "description": payload.prompt,
-        "evidence_or_trigger": f"Options: {[opt.text for opt in payload.options]}",
-        "intervention_or_followup": payload.scoring_cautions or "Scored according to teacher distractor rubric.",
-        "status": "verified",
-        "verified_by": payload.author or "Teacher SME",
-        "verified_at": datetime.utcnow().isoformat(),
-        "created_at": datetime.utcnow().isoformat()
-    }
-    kg.get("records_by_type", {}).setdefault("assessment", []).append(new_record)
-    _save_knowledge_graph(kg)
+    new_record = CurriculumRecordDB(
+        id=spec_id,
+        record_type="assessment",
+        name=payload.title,
+        source_or_target=payload.concept_id,
+        relation="assesses",
+        description=payload.prompt,
+        evidence_or_trigger=f"Options: {[opt.text for opt in payload.options]}",
+        intervention_or_followup=payload.scoring_cautions or "Scored according to teacher distractor rubric.",
+        status="verified",
+        verified_by=payload.author or "Teacher SME",
+        verified_at=datetime.utcnow()
+    )
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
+    _save_knowledge_graph_fallback(db)
 
     return {
-        "message": "Question and Assessment Specification successfully created and verified.",
+        "message": "Question and Assessment Specification successfully created and saved to SQL database.",
         "question_id": q_id,
         "assessment_id": spec_id,
-        "record": new_record
-    }
-
-
-@router.post("/knowledge-graph/concept/create")
-def create_concept(payload: ConceptCreateRequest):
-    kg = _load_knowledge_graph()
-    concepts = kg.get("records_by_type", {}).setdefault("concept", [])
-    
-    prefix = payload.chapter_id.upper().replace("CH0", "").replace("CH", "")
-    for ch in kg.get("chapters", []):
-        if ch.get("id", "").lower() == payload.chapter_id.lower() or str(ch.get("number")) == str(payload.chapter_id) or ch.get("prefix", "").lower() == payload.chapter_id.lower():
-            prefix = ch.get("prefix")
-            break
-
-    if payload.id:
-        cid = payload.id.strip().upper()
-    else:
-        existing_nums = []
-        for c in concepts:
-            if c.get("id", "").startswith(f"{prefix}-"):
-                try:
-                    num = int(c.get("id", "").split("-")[1])
-                    existing_nums.append(num)
-                except:
-                    pass
-        next_num = max(existing_nums, default=0) + 1
-        cid = f"{prefix}-{next_num:02d}"
-
-    if any(c.get("id") == cid for c in concepts):
-        raise HTTPException(status_code=400, detail=f"Concept ID {cid} already exists.")
-
-    from datetime import datetime
-    new_concept = {
-        "record_type": "concept",
-        "id": cid,
-        "name": payload.name.strip(),
-        "description": payload.description.strip(),
-        "domain": payload.domain or "NCERT Grade 6",
-        "class_level": payload.class_level or 6,
-        "status": "verified",
-        "verified_by": payload.author or "Teacher SME",
-        "verified_at": datetime.utcnow().isoformat(),
-        "created_at": datetime.utcnow().isoformat()
-    }
-    concepts.append(new_concept)
-
-    created_edges = []
-    if payload.prerequisites:
-        for prereq_id in payload.prerequisites:
-            prereq_id = prereq_id.strip()
-            edge_id = f"EDG-{prereq_id}-{cid}"
-            edge_record = {
-                "record_type": "edge",
-                "id": edge_id,
-                "name": f"Prerequisite: {prereq_id} -> {cid}",
-                "source_or_target": f"{prereq_id} -> {cid}",
-                "relation": "prerequisite_for",
-                "description": f"Foundational understanding of {prereq_id} required before {cid}.",
-                "status": "verified",
-                "verified_by": payload.author or "Teacher SME",
-                "verified_at": datetime.utcnow().isoformat(),
-                "created_at": datetime.utcnow().isoformat()
-            }
-            kg.get("records_by_type", {}).setdefault("edge", []).append(edge_record)
-            created_edges.append(edge_record)
-
-    _save_knowledge_graph(kg)
-    return {
-        "message": f"Concept {cid} successfully created.",
-        "concept": new_concept,
-        "created_edges": created_edges
-    }
-
-@router.post("/knowledge-graph/edge/create")
-def create_edge(payload: EdgeCreateRequest):
-    kg = _load_knowledge_graph()
-    edges = kg.get("records_by_type", {}).setdefault("edge", [])
-    
-    src = payload.source_id.strip().upper()
-    tgt = payload.target_id.strip().upper()
-    edge_id = f"EDG-{src}-{tgt}"
-    source_or_target = f"{src} -> {tgt}"
-
-    for e in edges:
-        if e.get("source_or_target") == source_or_target or e.get("id") == edge_id:
-            raise HTTPException(status_code=400, detail=f"Correlation edge between {source_or_target} already exists.")
-
-    from datetime import datetime
-    new_edge = {
-        "record_type": "edge",
-        "id": edge_id,
-        "name": f"Correlation: {source_or_target}",
-        "source_or_target": source_or_target,
-        "relation": payload.relation or "prerequisite_for",
-        "description": payload.description or f"Dependency pathway: mastering {src} unlocks {tgt}.",
-        "status": "verified",
-        "verified_by": payload.author or "Teacher SME",
-        "verified_at": datetime.utcnow().isoformat(),
-        "created_at": datetime.utcnow().isoformat()
-    }
-    edges.append(new_edge)
-    _save_knowledge_graph(kg)
-
-    return {
-        "message": f"Dependency edge {source_or_target} successfully established.",
-        "edge": new_edge
-    }
-
-@router.delete("/knowledge-graph/record/{record_id}")
-def delete_knowledge_graph_record(record_id: str):
-    kg = _load_knowledge_graph()
-    records = kg.get("records_by_type", {})
-    deleted = None
-    target_type = None
-
-    for r_type, r_list in records.items():
-        for i, item in enumerate(r_list):
-            if item.get("id") == record_id:
-                deleted = r_list.pop(i)
-                target_type = r_type
-                break
-        if deleted:
-            break
-
-    if not deleted:
-        raise HTTPException(status_code=404, detail=f"Record {record_id} not found in Knowledge Graph")
-
-    removed_edges_count = 0
-    if target_type == "concept":
-        edges = records.get("edge", [])
-        records["edge"] = [
-            e for e in edges
-            if record_id not in [x.strip() for x in e.get("source_or_target", "").split("->")]
-        ]
-        removed_edges_count = len(edges) - len(records["edge"])
-
-    _save_knowledge_graph(kg)
-    return {
-        "message": f"Record {record_id} successfully deleted from Knowledge Graph.",
-        "record_type": target_type,
-        "removed_edges_count": removed_edges_count
+        "record": _record_to_dict(new_record)
     }

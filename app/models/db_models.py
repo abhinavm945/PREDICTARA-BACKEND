@@ -136,3 +136,41 @@ class DiagnosticReportDB(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     attempt = relationship("AssessmentAttemptDB", back_populates="report")
+
+# =============================================================
+# CURRICULUM INTELLIGENCE GRAPH (CIG) SQL DATABASE STORAGE
+# =============================================================
+class ChapterDB(Base):
+    __tablename__ = "chapters"
+
+    id = Column(String(50), primary_key=True) # e.g. 'CH01_PAT'
+    number = Column(Integer, nullable=False)
+    name = Column(String(255), nullable=False)
+    prefix = Column(String(20), nullable=False)
+    domain = Column(String(100), nullable=False)
+    pages = Column(Integer, default=20)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class CurriculumRecordDB(Base):
+    __tablename__ = "curriculum_records"
+
+    id = Column(String(100), primary_key=True) # e.g. 'PAT-01', 'EDG-PAT-01-PAT-02'
+    record_type = Column(String(50), nullable=False, index=True) # 'concept', 'edge', 'misconception', 'assessment', 'intervention', 'mastery_rule'
+    chapter_id = Column(String(50), nullable=True, index=True)
+    prefix = Column(String(20), nullable=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    source_or_target = Column(String(255), nullable=True, index=True)
+    relation = Column(String(100), nullable=True)
+    evidence_or_trigger = Column(Text, nullable=True)
+    intervention_or_followup = Column(Text, nullable=True)
+    domain = Column(String(100), nullable=True)
+    class_level = Column(Integer, default=6)
+    subject = Column(String(100), default="Mathematics")
+    status = Column(String(50), default="draft") # 'verified', 'needs_revision', 'draft'
+    verified_by = Column(String(255), nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    verification_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
