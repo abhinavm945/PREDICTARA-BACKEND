@@ -149,6 +149,8 @@ class ChapterDB(Base):
     prefix = Column(String(20), nullable=False)
     domain = Column(String(100), nullable=False)
     pages = Column(Integer, default=20)
+    class_level = Column(Integer, default=6, index=True)
+    subject = Column(String(100), default="Mathematics", index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class CurriculumRecordDB(Base):

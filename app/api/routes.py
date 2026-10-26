@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.models.schemas import AssessmentSubmission, PipelineResponse, Question
 from app.data.seed_data import QUESTIONS_DB, CONCEPTS_DB
 from app.services.pipeline_engine import pipeline_engine
@@ -46,6 +46,7 @@ from app.models.schemas import (
     RoleUpdateRequest,
     CustomQuestionCreateRequest,
     ConceptCreateRequest,
+    ChapterCreateRequest,
     EdgeCreateRequest
 )
 
@@ -617,10 +618,163 @@ def _save_knowledge_graph_fallback(db: Session):
     except Exception as e:
         print(f"Fallback JSON sync skipped: {e}")
 
+@router.get("/curriculum/classes-and-subjects")
+def get_classes_and_subjects(db: Session = Depends(get_db)):
+    """Returns all available Classes, Subjects, and Curriculum scopes from the SQL database."""
+    all_chapters = db.query(ChapterDB).all()
+    
+    classes_map = {}
+    for ch in all_chapters:
+        lvl = ch.class_level if hasattr(ch, "class_level") and ch.class_level else 6
+        subj = ch.subject if hasattr(ch, "subject") and ch.subject else "Mathematics"
+        if lvl not in classes_map:
+            classes_map[lvl] = {
+                "class_level": lvl,
+                "label": f"Grade {lvl}" if lvl != 5 else "Grade 5 (Foundations)",
+                "subjects": set()
+            }
+        classes_map[lvl]["subjects"].add(subj)
+        
+    for extra_lvl in [9, 10]:
+        if extra_lvl not in classes_map:
+            classes_map[extra_lvl] = {
+                "class_level": extra_lvl,
+                "label": f"Grade {extra_lvl} (Secondary)",
+                "subjects": {"Mathematics"}
+            }
+            
+    classes_list = []
+    for lvl in sorted(classes_map.keys()):
+        classes_list.append({
+            "class_level": lvl,
+            "label": classes_map[lvl]["label"],
+            "subjects": sorted(list(classes_map[lvl]["subjects"]))
+        })
+        
+    curricula = [
+        {
+            "class_level": 6,
+            "subject": "Mathematics",
+            "board": "NCERT",
+            "curriculum_name": "Ganita Prakash",
+            "description": "National Curriculum Framework for Middle Stage (Class 6 Mathematics)",
+            "chapters_count": 10,
+            "is_primary": True
+        },
+        {
+            "class_level": 7,
+            "subject": "Mathematics",
+            "board": "NCERT",
+            "curriculum_name": "Ganita Prakash (Grade 7)",
+            "description": "NCERT Class 7 Mathematics Curriculum Ontology",
+            "chapters_count": 12,
+            "is_primary": False
+        },
+        {
+            "class_level": 8,
+            "subject": "Mathematics",
+            "board": "NCERT",
+            "curriculum_name": "Mathematics Grade 8",
+            "description": "NCERT Class 8 Mathematics Curriculum Ontology",
+            "chapters_count": 10,
+            "is_primary": False
+        },
+        {
+            "class_level": 5,
+            "subject": "Mathematics",
+            "board": "NCERT",
+            "curriculum_name": "Math-Magic (Grade 5 Foundations)",
+            "description": "Prior-Grade Foundational Anchors for Class 6 Middle School Transition",
+            "chapters_count": 6,
+            "is_primary": False
+        },
+        {
+            "class_level": 6,
+            "subject": "Science",
+            "board": "NCERT",
+            "curriculum_name": "Curiosity (Science Grade 6)",
+            "description": "Interdisciplinary STEM Anchors (Physics, Chemistry, Biology & Earth Sciences)",
+            "chapters_count": 12,
+            "is_primary": False
+        }
+    ]
+    
+    return {
+        "classes": classes_list,
+        "curricula": curricula,
+        "default": {
+            "class_level": 6,
+            "subject": "Mathematics"
+        }
+    }
+
+@router.post("/curriculum/chapter/create")
+def create_chapter(payload: ChapterCreateRequest, db: Session = Depends(get_db)):
+    """Allows teachers to add a new chapter to any class or subject in SQL."""
+    ch_id = payload.id or f"CH{payload.number:02d}_{payload.prefix.upper()}"
+    existing = db.query(ChapterDB).filter_by(id=ch_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Chapter {ch_id} already exists.")
+        
+    new_ch = ChapterDB(
+        id=ch_id,
+        number=payload.number,
+        name=payload.name,
+        prefix=payload.prefix.upper(),
+        domain=payload.domain,
+        pages=payload.pages or 20,
+        class_level=payload.class_level,
+        subject=payload.subject
+    )
+    db.add(new_ch)
+    db.commit()
+    db.refresh(new_ch)
+    
+    starter_cid = f"{new_ch.prefix}-01"
+    if not db.query(CurriculumRecordDB).filter_by(id=starter_cid).first():
+        db.add(CurriculumRecordDB(
+            id=starter_cid,
+            record_type="concept",
+            chapter_id=new_ch.id,
+            prefix=new_ch.prefix,
+            name=f"Introduction to {new_ch.name}",
+            description=f"Core competency definitions for {new_ch.name} (Class {new_ch.class_level} {new_ch.subject}).",
+            domain=new_ch.domain,
+            class_level=new_ch.class_level,
+            subject=new_ch.subject,
+            status="verified",
+            verified_by="Teacher SME"
+        ))
+        db.commit()
+        
+    return {
+        "message": f"Chapter {new_ch.id} successfully created.",
+        "chapter": {
+            "id": new_ch.id,
+            "number": new_ch.number,
+            "name": new_ch.name,
+            "prefix": new_ch.prefix,
+            "domain": new_ch.domain,
+            "pages": new_ch.pages,
+            "class_level": new_ch.class_level,
+            "subject": new_ch.subject
+        }
+    }
+
 @router.get("/knowledge-graph/chapters")
-def get_knowledge_graph_chapters(db: Session = Depends(get_db)):
-    """Fetches chapter list and concept counts directly from SQL database."""
-    chapters_db = db.query(ChapterDB).order_by(ChapterDB.number).all()
+def get_knowledge_graph_chapters(
+    class_level: Optional[int] = None,
+    subject: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Fetches chapter list and concept counts directly from SQL database, optionally filtered by class_level and subject."""
+    query = db.query(ChapterDB)
+    if class_level is not None:
+        query = query.filter(ChapterDB.class_level == class_level)
+    if subject is not None and subject != "ALL":
+        query = query.filter(ChapterDB.subject.ilike(subject))
+        
+    chapters_db = query.order_by(ChapterDB.number).all()
     chapters = []
     for ch in chapters_db:
         concept_count = db.query(CurriculumRecordDB).filter(
@@ -634,9 +788,16 @@ def get_knowledge_graph_chapters(db: Session = Depends(get_db)):
             "prefix": ch.prefix,
             "domain": ch.domain,
             "pages": ch.pages,
+            "class_level": getattr(ch, "class_level", 6) or 6,
+            "subject": getattr(ch, "subject", "Mathematics") or "Mathematics",
             "concept_count": concept_count
         })
-    return {"total_chapters": len(chapters), "chapters": chapters}
+    return {
+        "total_chapters": len(chapters),
+        "class_level": class_level,
+        "subject": subject,
+        "chapters": chapters
+    }
 
 @router.get("/knowledge-graph/chapter/{chapter_id}")
 def get_chapter_knowledge_graph(chapter_id: str, db: Session = Depends(get_db)):
@@ -807,15 +968,31 @@ def verify_knowledge_graph_record(record_id: str, payload: RecordVerifyRequest, 
     return {"message": f"Record {record_id} marked as {payload.status} in SQL database", "record": _record_to_dict(rec), "record_type": rec.record_type}
 
 @router.get("/knowledge-graph/verification-stats")
-def get_verification_stats(db: Session = Depends(get_db)):
-    """Calculates verification stats using SQL aggregates."""
-    all_items = db.query(CurriculumRecordDB).all()
+def get_verification_stats(
+    class_level: Optional[int] = None,
+    subject: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Calculates verification stats using SQL aggregates, optionally filtered by class_level and subject."""
+    rec_query = db.query(CurriculumRecordDB)
+    if class_level is not None:
+        rec_query = rec_query.filter(CurriculumRecordDB.class_level == class_level)
+    if subject is not None and subject != "ALL":
+        rec_query = rec_query.filter(CurriculumRecordDB.subject.ilike(subject))
+    all_items = rec_query.all()
+    
     total_records = len(all_items)
     verified = sum(1 for item in all_items if item.status == "verified")
     needs_revision = sum(1 for item in all_items if item.status == "needs_revision")
     pending = total_records - verified - needs_revision
 
-    chapters = db.query(ChapterDB).order_by(ChapterDB.number).all()
+    ch_query = db.query(ChapterDB)
+    if class_level is not None:
+        ch_query = ch_query.filter(ChapterDB.class_level == class_level)
+    if subject is not None and subject != "ALL":
+        ch_query = ch_query.filter(ChapterDB.subject.ilike(subject))
+    chapters = ch_query.order_by(ChapterDB.number).all()
+
     chapters_stats = []
     for ch in chapters:
         prefix = ch.prefix
@@ -836,6 +1013,8 @@ def get_verification_stats(db: Session = Depends(get_db)):
         })
 
     return {
+        "class_level": class_level,
+        "subject": subject,
         "total_records": total_records,
         "verified": verified,
         "needs_revision": needs_revision,
@@ -845,7 +1024,8 @@ def get_verification_stats(db: Session = Depends(get_db)):
     }
 
 @router.post("/knowledge-graph/concept/create")
-def create_concept(payload: ConceptCreateRequest, db: Session = Depends(get_db)):
+def create_concept(payload: ConceptCreateRequest,
+    ChapterCreateRequest, db: Session = Depends(get_db)):
     """Creates a new curriculum topic directly in the SQL database."""
     prefix = payload.chapter_id.upper().replace("CH0", "").replace("CH", "")
     ch = db.query(ChapterDB).filter(

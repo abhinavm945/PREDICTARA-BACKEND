@@ -99,10 +99,81 @@ def seed_database():
                         name=ch.get("name"),
                         prefix=ch.get("prefix"),
                         domain=ch.get("domain"),
-                        pages=ch.get("pages", 20)
+                        pages=ch.get("pages", 20),
+                        class_level=6,
+                        subject="Mathematics"
                     )
                     db.add(ch_db)
                 db.commit()
+
+            # Additional multi-grade chapters
+            additional_chapters = [
+                # Grade 7 Mathematics
+                {"id": "CH01_INT7", "number": 1, "name": "Integers", "prefix": "INT7", "domain": "Number Systems & Arithmetic", "pages": 24, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH02_FRC7", "number": 2, "name": "Fractions and Decimals", "prefix": "FRC7", "domain": "Fractions & Rational Numbers", "pages": 26, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH03_DAT7", "number": 3, "name": "Data Handling", "prefix": "DAT7", "domain": "Statistics & Data Handling", "pages": 22, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH04_EQU7", "number": 4, "name": "Simple Equations", "prefix": "EQU7", "domain": "Algebra & Linear Equations", "pages": 20, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH05_LIN7", "number": 5, "name": "Lines and Angles", "prefix": "LIN7", "domain": "Geometry", "pages": 20, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH06_TRI7", "number": 6, "name": "The Triangle and its Properties", "prefix": "TRI7", "domain": "Geometry & Triangles", "pages": 24, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH07_CMP7", "number": 7, "name": "Comparing Quantities", "prefix": "CMP7", "domain": "Ratio, Proportions & Percentages", "pages": 22, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH08_RAT7", "number": 8, "name": "Rational Numbers", "prefix": "RAT7", "domain": "Rational Numbers", "pages": 20, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH09_PER7", "number": 9, "name": "Perimeter and Area", "prefix": "PER7", "domain": "Mensuration & Geometry", "pages": 24, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH10_ALG7", "number": 10, "name": "Algebraic Expressions", "prefix": "ALG7", "domain": "Algebraic Expressions", "pages": 22, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH11_EXP7", "number": 11, "name": "Exponents and Powers", "prefix": "EXP7", "domain": "Number Theory & Powers", "pages": 18, "class_level": 7, "subject": "Mathematics"},
+                {"id": "CH12_SYM7", "number": 12, "name": "Symmetry", "prefix": "SYM7", "domain": "Transformational Geometry", "pages": 16, "class_level": 7, "subject": "Mathematics"},
+                # Grade 8 Mathematics
+                {"id": "CH01_RAT8", "number": 1, "name": "Rational Numbers", "prefix": "RAT8", "domain": "Number Systems", "pages": 20, "class_level": 8, "subject": "Mathematics"},
+                {"id": "CH02_LEQ8", "number": 2, "name": "Linear Equations in One Variable", "prefix": "LEQ8", "domain": "Algebra", "pages": 22, "class_level": 8, "subject": "Mathematics"},
+                {"id": "CH03_QUA8", "number": 3, "name": "Understanding Quadrilaterals", "prefix": "QUA8", "domain": "Geometry", "pages": 24, "class_level": 8, "subject": "Mathematics"},
+                {"id": "CH04_DAT8", "number": 4, "name": "Data Handling", "prefix": "DAT8", "domain": "Statistics", "pages": 20, "class_level": 8, "subject": "Mathematics"},
+                {"id": "CH05_SQR8", "number": 5, "name": "Squares and Square Roots", "prefix": "SQR8", "domain": "Number Theory", "pages": 22, "class_level": 8, "subject": "Mathematics"},
+                {"id": "CH06_CUB8", "number": 6, "name": "Cubes and Cube Roots", "prefix": "CUB8", "domain": "Number Theory", "pages": 18, "class_level": 8, "subject": "Mathematics"},
+                {"id": "CH07_CMP8", "number": 7, "name": "Comparing Quantities", "prefix": "CMP8", "domain": "Commercial Mathematics", "pages": 24, "class_level": 8, "subject": "Mathematics"},
+                {"id": "CH08_ALG8", "number": 8, "name": "Algebraic Expressions and Identities", "prefix": "ALG8", "domain": "Algebra", "pages": 26, "class_level": 8, "subject": "Mathematics"},
+                {"id": "CH09_MEN8", "number": 9, "name": "Mensuration", "prefix": "MEN8", "domain": "Mensuration", "pages": 26, "class_level": 8, "subject": "Mathematics"},
+                {"id": "CH10_EXP8", "number": 10, "name": "Exponents and Powers", "prefix": "EXP8", "domain": "Number Systems", "pages": 18, "class_level": 8, "subject": "Mathematics"},
+                # Grade 5 Foundations
+                {"id": "CH01_NUM5", "number": 1, "name": "The Fish Tale (Large Numbers)", "prefix": "NUM5", "domain": "Number Sense", "pages": 18, "class_level": 5, "subject": "Mathematics"},
+                {"id": "CH02_SHP5", "number": 2, "name": "Shapes and Angles", "prefix": "SHP5", "domain": "Geometry Foundations", "pages": 20, "class_level": 5, "subject": "Mathematics"},
+                {"id": "CH03_SQR5", "number": 3, "name": "How Many Squares? (Area Intuition)", "prefix": "SQR5", "domain": "Measurement", "pages": 16, "class_level": 5, "subject": "Mathematics"},
+                {"id": "CH04_FRC5", "number": 4, "name": "Parts and Wholes (Fraction Foundations)", "prefix": "FRC5", "domain": "Fractions", "pages": 22, "class_level": 5, "subject": "Mathematics"},
+                {"id": "CH05_SYM5", "number": 5, "name": "Does it Look the Same? (Symmetry)", "prefix": "SYM5", "domain": "Transformational Geometry", "pages": 18, "class_level": 5, "subject": "Mathematics"},
+                {"id": "CH06_FAC5", "number": 6, "name": "Be My Multiple, I'll be Your Factor", "prefix": "FAC5", "domain": "Number Theory Foundations", "pages": 20, "class_level": 5, "subject": "Mathematics"},
+                # Grade 6 Science (Curiosity)
+                {"id": "CH01_SCI6", "number": 1, "name": "The Wonderful World of Science", "prefix": "SCI6", "domain": "Scientific Enquiry", "pages": 16, "class_level": 6, "subject": "Science"},
+                {"id": "CH02_DIV6", "number": 2, "name": "Diversity in the Living World", "prefix": "DIV6", "domain": "Biology & Living World", "pages": 22, "class_level": 6, "subject": "Science"},
+                {"id": "CH03_NUT6", "number": 3, "name": "Mindful Eating: A Path to a Healthy Body", "prefix": "NUT6", "domain": "Nutrition & Physiology", "pages": 20, "class_level": 6, "subject": "Science"},
+                {"id": "CH04_MAG6", "number": 4, "name": "Exploring Magnets", "prefix": "MAG6", "domain": "Physics & Magnetism", "pages": 18, "class_level": 6, "subject": "Science"},
+                {"id": "CH05_MOT6", "number": 5, "name": "Measurement of Length and Motion", "prefix": "MOT6", "domain": "Physics & Kinematics", "pages": 22, "class_level": 6, "subject": "Science"},
+                {"id": "CH06_MAT6", "number": 6, "name": "Materials Around Us", "prefix": "MAT6", "domain": "Chemistry & Material Properties", "pages": 20, "class_level": 6, "subject": "Science"},
+                {"id": "CH07_TMP6", "number": 7, "name": "Temperature and its Measurement", "prefix": "TMP6", "domain": "Thermodynamics", "pages": 16, "class_level": 6, "subject": "Science"},
+                {"id": "CH08_WTR6", "number": 8, "name": "A Journey through States of Water", "prefix": "WTR6", "domain": "Physical Chemistry", "pages": 18, "class_level": 6, "subject": "Science"},
+                {"id": "CH09_SEP6", "number": 9, "name": "Methods of Separation in Everyday Life", "prefix": "SEP6", "domain": "Separation Sciences", "pages": 20, "class_level": 6, "subject": "Science"},
+                {"id": "CH10_LIV6", "number": 10, "name": "Living Creatures: Exploring their Characteristics", "prefix": "LIV6", "domain": "Zoology & Ecology", "pages": 22, "class_level": 6, "subject": "Science"},
+                {"id": "CH11_NAT6", "number": 11, "name": "Nature's Treasures", "prefix": "NAT6", "domain": "Environmental Science", "pages": 18, "class_level": 6, "subject": "Science"},
+                {"id": "CH12_AST6", "number": 12, "name": "Beyond Earth", "prefix": "AST6", "domain": "Astronomy & Space Science", "pages": 20, "class_level": 6, "subject": "Science"},
+            ]
+            for ach in additional_chapters:
+                if not db.query(ChapterDB).filter_by(id=ach["id"]).first():
+                    ch_obj = ChapterDB(**ach)
+                    db.add(ch_obj)
+                    # Starter concept
+                    cid = f"{ach['prefix']}-01"
+                    if not db.query(CurriculumRecordDB).filter_by(id=cid).first():
+                        db.add(CurriculumRecordDB(
+                            id=cid,
+                            record_type="concept",
+                            chapter_id=ach["id"],
+                            prefix=ach["prefix"],
+                            name=f"Introduction to {ach['name']}",
+                            description=f"Core conceptual foundations and NCERT competency definitions for {ach['name']} (Class {ach['class_level']} {ach['subject']}).",
+                            domain=ach["domain"],
+                            class_level=ach["class_level"],
+                            subject=ach["subject"],
+                            status="verified",
+                            verified_by="NCERT Curriculum Framework"
+                        ))
+            db.commit()
 
             # 2. Seed Curriculum Records (all 511+ records)
             if db.query(CurriculumRecordDB).count() == 0:

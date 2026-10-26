@@ -254,8 +254,19 @@ class ConceptCreateRequest(BaseModel):
     description: str
     domain: Optional[str] = None
     class_level: Optional[int] = 6
+    subject: Optional[str] = "Mathematics"
     prerequisites: Optional[List[str]] = []
     author: Optional[str] = "Teacher SME"
+
+class ChapterCreateRequest(BaseModel):
+    id: Optional[str] = None
+    number: int
+    name: str
+    prefix: str
+    domain: str
+    pages: Optional[int] = 20
+    class_level: int = 6
+    subject: str = "Mathematics"
 
 class EdgeCreateRequest(BaseModel):
     source_id: str
