@@ -28,20 +28,29 @@ def seed_database():
             db.add(school)
             db.commit()
 
-        # Seed demo student
-        user = db.query(UserDB).filter_by(email="alex.johnson@predictara.edu").first()
-        if not user:
-            user = UserDB(
-                id="usr_student_01",
-                school_id=school.id,
-                email="alex.johnson@predictara.edu",
-                full_name="Alex Johnson",
-                role="STUDENT",
-                grade_level=6,
-                section="A"
-            )
-            db.add(user)
-            db.commit()
+        # Seed demo users (Student, Teacher, Admin, Parent)
+        demo_users = [
+            {"id": "usr_student_01", "email": "alex.johnson@predictara.edu", "full_name": "Alex Johnson", "role": "STUDENT", "grade_level": 6, "section": "A"},
+            {"id": "usr_teacher_01", "email": "sarah.davis@predictara.edu", "full_name": "Sarah Davis", "role": "TEACHER", "grade_level": 6, "section": "Math Dept"},
+            {"id": "usr_admin_01", "email": "admin@predictara.edu", "full_name": "Dr. Robert Vance (Principal)", "role": "ADMIN", "grade_level": 6, "section": "Administration"},
+            {"id": "usr_parent_01", "email": "parent@predictara.edu", "full_name": "Elena Johnson", "role": "PARENT", "grade_level": 6, "section": "A"},
+            {"id": "usr_student_02", "email": "rohan.sharma@predictara.edu", "full_name": "Rohan Sharma", "role": "STUDENT", "grade_level": 6, "section": "B"},
+            {"id": "usr_student_03", "email": "priya.patel@predictara.edu", "full_name": "Priya Patel", "role": "STUDENT", "grade_level": 6, "section": "A"},
+        ]
+        for du in demo_users:
+            existing_user = db.query(UserDB).filter_by(email=du["email"]).first()
+            if not existing_user:
+                u_obj = UserDB(
+                    id=du["id"],
+                    school_id=school.id,
+                    email=du["email"],
+                    full_name=du["full_name"],
+                    role=du["role"],
+                    grade_level=du["grade_level"],
+                    section=du["section"]
+                )
+                db.add(u_obj)
+        db.commit()
 
         # Seed concepts
         for cid, c in CONCEPTS_DB.items():

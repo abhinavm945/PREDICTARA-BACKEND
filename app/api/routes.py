@@ -176,6 +176,77 @@ def update_user_profile(payload: ProfileUpdateRequest, db: Session = Depends(get
     )
 
 
+class AdminUserCreateRequest(BaseModel):
+    email: str
+    full_name: str
+    role: str = "STUDENT"
+    grade_level: Optional[int] = 6
+    section: Optional[str] = "A"
+
+@router.get("/auth/users")
+def list_all_users(db: Session = Depends(get_db)):
+    """Lists all registered users in the database for role and access management."""
+    users = db.query(UserDB).order_by(UserDB.created_at.desc()).all()
+    return [
+        {
+            "id": u.id,
+            "email": u.email,
+            "full_name": u.full_name,
+            "role": u.role,
+            "grade_level": u.grade_level,
+            "section": u.section,
+            "school_id": u.school_id,
+            "created_at": u.created_at.isoformat() if u.created_at else None
+        }
+        for u in users
+    ]
+
+@router.post("/auth/user/create")
+def admin_create_user(payload: AdminUserCreateRequest, db: Session = Depends(get_db)):
+    """Allows an Admin to create a new user with a specific role."""
+    import uuid
+    email = payload.email.strip().lower()
+    existing = db.query(UserDB).filter_by(email=email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="User with this email already exists.")
+    valid_roles = ["STUDENT", "TEACHER", "PARENT", "ADMIN"]
+    role = payload.role.upper()
+    if role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of {valid_roles}")
+    new_user = UserDB(
+        id=f"usr_{uuid.uuid4().hex[:8]}",
+        email=email,
+        full_name=payload.full_name.strip(),
+        role=role,
+        grade_level=payload.grade_level or 6,
+        section=payload.section or "A"
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return {
+        "message": f"User {new_user.full_name} created successfully with role {new_user.role}.",
+        "user": {
+            "id": new_user.id,
+            "email": new_user.email,
+            "full_name": new_user.full_name,
+            "role": new_user.role,
+            "grade_level": new_user.grade_level,
+            "section": new_user.section,
+            "created_at": new_user.created_at.isoformat() if new_user.created_at else None
+        }
+    }
+
+@router.delete("/auth/user/{user_id}")
+def delete_user(user_id: str, db: Session = Depends(get_db)):
+    """Allows an Admin to delete a user."""
+    user = db.query(UserDB).filter_by(id=user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return {"message": f"User {user_id} deleted successfully."}
+
 @router.patch("/auth/user/{user_id}/role", response_model=UserResponse)
 def update_user_role(user_id: str, payload: RoleUpdateRequest, db: Session = Depends(get_db)):
     """Assigns or updates a user's role (STUDENT, TEACHER, PARENT, ADMIN)."""
