@@ -8,7 +8,31 @@ from app.models.schemas import ThreeTierReports
 class GeminiFlashService:
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")
-        self.model = settings.GEMINI_MODEL # gemini-1.5-flash
+        self.model = settings.GEMINI_MODEL or "gemini-flash-latest"
+
+    @staticmethod
+    def _clean_report_text(val: Any) -> str:
+        """Converts LLM output to clean markdown text if the model outputs nested objects."""
+        if val is None:
+            return ""
+        if isinstance(val, str):
+            return val.strip()
+        if isinstance(val, dict):
+            lines = []
+            for k, v in val.items():
+                title = k.replace('_', ' ').title()
+                if isinstance(v, list):
+                    lines.append(f"**{title}:**")
+                    for item in v:
+                        lines.append(f"- {item}")
+                elif isinstance(v, dict):
+                    lines.append(f"**{title}:** {json.dumps(v)}")
+                else:
+                    lines.append(f"**{title}:** {v}")
+            return "\n\n".join(lines)
+        if isinstance(val, list):
+            return "\n".join([f"- {item}" for item in val])
+        return str(val)
 
     def generate_three_tier_reports(
         self,
@@ -34,18 +58,23 @@ class GeminiFlashService:
         - Diagnostic Evidence Stats: {json.dumps(evidence_summary)}
 
         Generate four distinct report summaries:
-        1. student_report: Encouraging, positive, non-alarming tone. Focus on specific growth areas.
-        2. parent_report: Constructive, accessible guidance for home support, explaining the underlying why without intimidating jargon.
-        3. teacher_report: Data-driven, precise pedagogical notes highlighting exact error types (calculation vs prerequisite gap) and classroom remediation strategy.
-        4. admin_summary: High-level cohort health indicator and syllabus risk flag.
+        1. student_report: Encouraging, positive, non-alarming tone. Focus on specific growth areas. Written directly to the student in markdown.
+        2. parent_report: Constructive, accessible guidance for home support, explaining the underlying why without intimidating jargon. Written to parents in markdown.
+        3. teacher_report: Data-driven, precise pedagogical notes highlighting exact error types (calculation vs prerequisite gap) and classroom remediation strategy. Written for teachers in markdown.
+        4. admin_summary: High-level cohort health indicator and syllabus risk flag in 1-2 concise sentences.
 
         Return strictly valid JSON with keys: 'student_report', 'parent_report', 'teacher_report', 'admin_summary'.
+        The value for each key must be a comprehensive markdown string.
         """
 
         if self.api_key:
             try:
-                # Direct Gemini REST API endpoint
+                # Direct Gemini REST API endpoint with x-goog-api-key header and query parameter
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+                headers = {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": self.api_key
+                }
                 payload = {
                     "contents": [{
                         "parts": [{"text": prompt}]
@@ -54,17 +83,19 @@ class GeminiFlashService:
                         "response_mime_type": "application/json"
                     }
                 }
-                res = requests.post(url, json=payload, timeout=20)
+                res = requests.post(url, headers=headers, json=payload, timeout=25)
                 if res.status_code == 200:
                     data = res.json()
                     raw_text = data['candidates'][0]['content']['parts'][0]['text']
                     parsed = json.loads(raw_text)
                     return ThreeTierReports(
-                        student_report=parsed.get("student_report", ""),
-                        parent_report=parsed.get("parent_report", ""),
-                        teacher_report=parsed.get("teacher_report", ""),
-                        admin_summary=parsed.get("admin_summary", "")
+                        student_report=self._clean_report_text(parsed.get("student_report", "")),
+                        parent_report=self._clean_report_text(parsed.get("parent_report", "")),
+                        teacher_report=self._clean_report_text(parsed.get("teacher_report", "")),
+                        admin_summary=self._clean_report_text(parsed.get("admin_summary", ""))
                     )
+                else:
+                    print(f"[Gemini API returned status {res.status_code}]: {res.text[:200]}")
             except Exception as e:
                 print(f"[Gemini API Call failed, falling back to deterministic template]: {e}")
 
