@@ -1102,8 +1102,7 @@ def get_verification_stats(
     }
 
 @router.post("/knowledge-graph/concept/create")
-def create_concept(payload: ConceptCreateRequest,
-    ChapterCreateRequest, db: Session = Depends(get_db)):
+def create_concept(payload: ConceptCreateRequest, db: Session = Depends(get_db)):
     """Creates a new curriculum topic directly in the SQL database."""
     prefix = payload.chapter_id.upper().replace("CH0", "").replace("CH", "")
     ch = db.query(ChapterDB).filter(
@@ -1136,11 +1135,13 @@ def create_concept(payload: ConceptCreateRequest,
     new_concept = CurriculumRecordDB(
         id=cid,
         record_type="concept",
+        chapter_id=ch.id if ch else payload.chapter_id,
         prefix=prefix,
         name=payload.name.strip(),
         description=payload.description.strip(),
-        domain=payload.domain or "NCERT Grade 6",
-        class_level=payload.class_level or 6,
+        domain=payload.domain or (ch.domain if ch else "NCERT Curriculum"),
+        class_level=payload.class_level or (ch.class_level if ch else 6),
+        subject=payload.subject or (ch.subject if ch else "Mathematics"),
         status="verified",
         verified_by=payload.author or "Teacher SME",
         verified_at=datetime.utcnow()
