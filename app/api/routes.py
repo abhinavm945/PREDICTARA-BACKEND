@@ -4,9 +4,16 @@ from app.models.schemas import AssessmentSubmission, PipelineResponse, Question
 from app.data.seed_data import QUESTIONS_DB, CONCEPTS_DB
 from app.services.pipeline_engine import pipeline_engine
 from app.services.mathpix_service import mathpix_service
+from app.services.gemini_service import gemini_service
 from pydantic import BaseModel
 
 router = APIRouter()
+
+@router.get("/ai/usage-stats")
+def get_ai_usage_stats():
+    """Retrieve real-time token safeguards, rate limiting, and cache metrics for Gemini Flash."""
+    return gemini_service.get_stats()
+
 
 class OCRRequest(BaseModel):
     image_base64: str
