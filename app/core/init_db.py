@@ -11,6 +11,7 @@ def seed_database():
         try:
             db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);"))
             db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS target_goal VARCHAR(255);"))
+            db.execute(text("ALTER TABLE users ALTER COLUMN section TYPE VARCHAR(255);"))
             db.commit()
         except Exception:
             db.rollback()

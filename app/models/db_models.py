@@ -39,7 +39,7 @@ class UserDB(Base):
     role = Column(String(50), nullable=False) # 'STUDENT', 'TEACHER', 'ADMIN', 'PARENT'
     password_hash = Column(String(255), nullable=True)
     grade_level = Column(Integer, default=6)
-    section = Column(String(10), default="A")
+    section = Column(String(100), default="A")
     target_goal = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

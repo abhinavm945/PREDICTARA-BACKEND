@@ -11,9 +11,15 @@ import app.models.db_models # Ensure models are loaded
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables if not exist
-    Base.metadata.create_all(bind=engine)
-    # Seed initial concepts and questions
-    seed_database()
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"[Startup Warning] Base.metadata.create_all: {e}")
+    # Seed initial concepts, chapters, and demo users
+    try:
+        seed_database()
+    except Exception as e:
+        print(f"[Startup Warning] seed_database: {e}")
     yield
 
 app = FastAPI(
