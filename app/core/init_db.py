@@ -15,6 +15,15 @@ def seed_database():
         except Exception:
             db.rollback()
 
+        # Safe schema migration for chapters and curriculum_records columns
+        for tbl in ["chapters", "curriculum_records"]:
+            try:
+                db.execute(text(f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS class_level INTEGER DEFAULT 6;"))
+                db.execute(text(f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS subject VARCHAR(100) DEFAULT 'Mathematics';"))
+                db.commit()
+            except Exception:
+                db.rollback()
+
         # Seed default school
         school = db.query(SchoolDB).filter_by(code="DEMO_SCH_01").first()
         if not school:

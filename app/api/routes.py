@@ -666,6 +666,8 @@ def _save_knowledge_graph_fallback(db: Session):
     try:
         chapters = db.query(ChapterDB).order_by(ChapterDB.number).all()
         records = db.query(CurriculumRecordDB).all()
+        if len(records) < 50:
+            return  # Protect against overwriting complete JSON with empty/partial DB
         
         ch_list = [{
             "id": c.id, "number": c.number, "name": c.name,
