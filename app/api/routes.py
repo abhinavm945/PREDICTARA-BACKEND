@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any, Optional
+from datetime import datetime, timedelta
 from app.models.schemas import AssessmentSubmission, PipelineResponse, Question
 from app.data.seed_data import QUESTIONS_DB, CONCEPTS_DB
 from app.services.pipeline_engine import pipeline_engine
@@ -113,7 +114,7 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
             password_hash=hash_password(payload.password),
             grade_level=payload.grade_level or 6,
             school_id=payload.school_id,
-            section="A"
+            section=payload.section or "A"
         )
         db.add(user)
         db.commit()
@@ -323,7 +324,7 @@ def get_moderator_queue(db: Session = Depends(get_db)):
     queue: List[ModeratorQueueItem] = []
 
     for rep in reports:
-        created_str = rep.created_at.strftime("%b %d, %I:%M %p") if rep.created_at else "Today"
+        created_str = rep.created_at.isoformat() if rep.created_at else datetime.utcnow().isoformat()
         status_label = "APPROVED" if rep.moderator_status in ("APPROVED", "AUTO_DISPATCHED") else "PENDING"
 
         gap = rep.prerequisite_gaps[0] if (rep.prerequisite_gaps and len(rep.prerequisite_gaps) > 0) else "Prerequisite Review"
@@ -343,15 +344,16 @@ def get_moderator_queue(db: Session = Depends(get_db)):
             grade="Grade 6",
             subject="Mathematics - Fractions",
             submitted_at=created_str,
-            sla_remaining="2 days remaining (3-day SLA)" if status_label == "PENDING" else "Dispatched",
+            sla_remaining="Within SLA (3-day target)" if status_label == "PENDING" else "Dispatched",
             status=status_label,
             ai_summary=ai_summary,
             detected_gap=gap_clean,
             teacher_remarks=rep.teacher_remarks or "",
-            dispatched_at=rep.dispatched_at.strftime("%b %d, %I:%M %p") if rep.dispatched_at else None
+            dispatched_at=rep.dispatched_at.isoformat() if rep.dispatched_at else None
         ))
 
     if not queue:
+        now_dt = datetime.utcnow()
         queue = [
             ModeratorQueueItem(
                 id="rep_demo_1",
@@ -360,8 +362,8 @@ def get_moderator_queue(db: Session = Depends(get_db)):
                 student_name="Alex Johnson",
                 grade="Grade 6",
                 subject="Mathematics - Fractions",
-                submitted_at="Today, 10:14 AM",
-                sla_remaining="2 days remaining (3-day SLA)",
+                submitted_at=(now_dt - timedelta(minutes=24)).isoformat(),
+                sla_remaining="Within SLA (3-day target)",
                 status="PENDING",
                 ai_summary="Student exhibits a critical blocking prerequisite gap in Equivalent Fractions & Simplification. Direct addition of numerators and denominators detected on Question 4 and Question 5.",
                 detected_gap="Equivalent Fractions & LCM Scaling",
@@ -374,8 +376,8 @@ def get_moderator_queue(db: Session = Depends(get_db)):
                 student_name="Priya Sharma",
                 grade="Grade 6",
                 subject="Mathematics - Fractions",
-                submitted_at="Yesterday, 3:30 PM",
-                sla_remaining="1 day remaining (3-day SLA)",
+                submitted_at=(now_dt - timedelta(hours=18)).isoformat(),
+                sla_remaining="Within SLA (3-day target)",
                 status="APPROVED",
                 ai_summary="Solid procedural fluency across basic fractions. Minor calculation slip on reducing 14/21.",
                 detected_gap="Arithmetic Reduction (Minor)",

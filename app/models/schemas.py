@@ -1,5 +1,5 @@
 from typing import List, Dict, Optional, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from enum import Enum
 
 class ErrorCategory(str, Enum):
@@ -24,10 +24,23 @@ class Question(BaseModel):
     concept_name: str
     title: str
     prompt: str
+    text: Optional[str] = None
     options: List[QuestionOption]
+    correct_option_id: Optional[str] = None
     difficulty: str = "medium"
     benchmark_seconds: int = 120
     solution_steps: List[str] = []
+
+    @model_validator(mode="after")
+    def populate_compatibility_fields(self):
+        if not self.text and self.prompt:
+            self.text = self.prompt
+        if not self.correct_option_id and self.options:
+            for opt in self.options:
+                if opt.is_correct:
+                    self.correct_option_id = opt.id
+                    break
+        return self
 
 class Concept(BaseModel):
     id: str
@@ -173,6 +186,7 @@ class RegisterRequest(BaseModel):
     role: Optional[str] = "STUDENT"
     grade_level: Optional[int] = 6
     school_id: Optional[str] = None
+    section: Optional[str] = "A"
 
 class UserResponse(BaseModel):
     id: str
