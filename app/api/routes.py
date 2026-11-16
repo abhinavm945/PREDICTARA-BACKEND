@@ -15,6 +15,39 @@ def get_ai_usage_stats():
     """Retrieve real-time token safeguards, rate limiting, and cache metrics for Gemini Flash."""
     return gemini_service.get_stats()
 
+@router.get("/ai/test")
+def test_gemini_api_connection():
+    """Live diagnostic ping directly to Google AI Studio Gemini API."""
+    return gemini_service.test_connection()
+
+class LiveReportRequest(BaseModel):
+    student_name: str = "Alex Johnson"
+    grade_level: int = 6
+    subject: str = "Mathematics - Fractions"
+    weak_concepts: List[str] = ["equivalent_fractions"]
+    prerequisite_gaps: List[str] = ["equivalent_fractions"]
+    risk_level: str = "MODERATE"
+    evidence_summary: Optional[Dict[str, Any]] = None
+
+@router.post("/ai/generate-report")
+def generate_ai_report_live(payload: LiveReportRequest):
+    """Directly triggers Gemini Flash report generation for Student, Parent, Teacher, and Admin."""
+    reports = gemini_service.generate_three_tier_reports(
+        student_name=payload.student_name,
+        grade=payload.grade_level,
+        subject=payload.subject,
+        weak_concepts=payload.weak_concepts,
+        prerequisite_gaps=payload.prerequisite_gaps,
+        risk_level=payload.risk_level,
+        evidence_summary=payload.evidence_summary or {"total_questions": 5, "correct_count": 3}
+    )
+    return {
+        "status": "SUCCESS",
+        "model": gemini_service.model,
+        "reports": reports.dict(),
+        "stats": gemini_service.get_stats()
+    }
+
 
 class OCRRequest(BaseModel):
     image_base64: str

@@ -11,7 +11,12 @@ from app.models.schemas import ThreeTierReports
 class GeminiFlashService:
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")
-        self.model = settings.GEMINI_MODEL or "gemini-flash-latest"
+        # Automatically normalize model: gemini-1.5-flash and gemini-2.0-flash return 404 on Google AI Studio v1beta
+        raw_model = settings.GEMINI_MODEL or os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+        if "1.5" in raw_model or "2.0" in raw_model:
+            self.model = "gemini-flash-latest"
+        else:
+            self.model = raw_model
 
         # Rate Limiting & Token Safeguards
         self.max_calls_per_minute = settings.GEMINI_MAX_CALLS_PER_MINUTE
@@ -30,7 +35,9 @@ class GeminiFlashService:
             "cache_hits": 0,
             "rate_limit_trips": 0,
             "daily_quota_trips": 0,
-            "errors": 0
+            "errors": 0,
+            "last_status_code": None,
+            "last_error": None
         }
 
     @staticmethod
@@ -124,6 +131,7 @@ class GeminiFlashService:
             now = time.time()
             one_minute_ago = now - 60.0
             recent_minute = sum(1 for t in self._call_timestamps if t > one_minute_ago)
+            key_preview = f"{self.api_key[:6]}...{self.api_key[-4:]}" if (self.api_key and len(self.api_key) > 10) else ("SET" if self.api_key else "NOT_CONFIGURED")
             return {
                 "total_requests": self._stats["total_requests"],
                 "gemini_api_calls": self._stats["gemini_api_calls"],
@@ -138,7 +146,62 @@ class GeminiFlashService:
                 "remaining_calls_today": max(0, self.max_calls_per_day - len(self._call_timestamps)),
                 "max_output_tokens": self.max_output_tokens,
                 "cache_enabled": self.cache_enabled,
-                "model": self.model
+                "model": self.model,
+                "api_key_configured": bool(self.api_key),
+                "api_key_preview": key_preview,
+                "last_status_code": self._stats.get("last_status_code"),
+                "last_error": self._stats.get("last_error")
+            }
+
+    def test_connection(self) -> Dict[str, Any]:
+        """Runs a direct, live test ping to Google Gemini Flash and returns status and latency."""
+        if not self.api_key:
+            return {
+                "success": False,
+                "status_code": 400,
+                "message": "GEMINI_API_KEY environment variable is not configured on server."
+            }
+        t0 = time.time()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self.api_key
+        }
+        payload = {
+            "contents": [{
+                "parts": [{"text": "Reply with 'PREDICTARA_GEMINI_ONLINE' in 3 words."}]
+            }],
+            "generationConfig": {
+                "maxOutputTokens": 150,
+                "temperature": 0.1
+            }
+        }
+        try:
+            res = requests.post(url, headers=headers, json=payload, timeout=10)
+            latency_ms = int((time.time() - t0) * 1000)
+            if res.status_code == 200:
+                data = res.json()
+                reply = data['candidates'][0]['content']['parts'][0]['text'].strip()
+                return {
+                    "success": True,
+                    "status_code": 200,
+                    "model": self.model,
+                    "latency_ms": latency_ms,
+                    "gemini_reply": reply,
+                    "message": "Gemini API connection active and working!"
+                }
+            return {
+                "success": False,
+                "status_code": res.status_code,
+                "model": self.model,
+                "latency_ms": latency_ms,
+                "error": res.text[:200]
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "status_code": 500,
+                "error": str(e)
             }
 
     def generate_three_tier_reports(
@@ -219,9 +282,20 @@ class GeminiFlashService:
                         "temperature": 0.4
                     }
                 }
-                self._record_call()
                 res = requests.post(url, headers=headers, json=payload, timeout=25)
+                with self._lock:
+                    self._stats["last_status_code"] = res.status_code
+
+                # Auto-heal: If unmapped model returned 404, fall back to gemini-flash-latest immediately
+                if res.status_code == 404 and self.model != "gemini-flash-latest":
+                    self.model = "gemini-flash-latest"
+                    fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={self.api_key}"
+                    res = requests.post(fallback_url, headers=headers, json=payload, timeout=25)
+                    with self._lock:
+                        self._stats["last_status_code"] = res.status_code
+
                 if res.status_code == 200:
+                    self._record_call()
                     data = res.json()
                     raw_text = data['candidates'][0]['content']['parts'][0]['text'].strip()
                     if raw_text.startswith("```json"):
@@ -247,11 +321,17 @@ class GeminiFlashService:
 
                     return reports
                 else:
+                    with self._lock:
+                        self._stats["last_error"] = f"HTTP {res.status_code}: {res.text[:150]}"
                     print(f"[Gemini API returned status {res.status_code}]: {res.text[:200]}")
             except Exception as e:
                 with self._lock:
                     self._stats["errors"] += 1
+                    self._stats["last_error"] = str(e)
                 print(f"[Gemini API Call failed, falling back to deterministic template]: {e}")
+        else:
+            with self._lock:
+                self._stats["last_error"] = "GEMINI_API_KEY environment variable is not configured on server"
 
         # Deterministic fallback conforming to PRD pedagogical guidelines
         fallback = self._fallback_report(student_name, grade, subject, weak_concepts, prerequisite_gaps, risk_level)
